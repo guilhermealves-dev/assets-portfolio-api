@@ -7,6 +7,6 @@ Requisitos:
 - Config firebase
 
 Frameworks:
-- Spring Boot 2.7.18
+- Spring Boot
 - Lombok
 - Firebase Admin
