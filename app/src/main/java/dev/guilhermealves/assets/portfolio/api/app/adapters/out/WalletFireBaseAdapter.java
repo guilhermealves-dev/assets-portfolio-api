@@ -1,22 +1,17 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.out;
 
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
-import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
-import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.WalletMapper;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.Wallet;
+import dev.guilhermealves.assets.portfolio.api.app.domain.entity.WalletDocument;
+import dev.guilhermealves.assets.portfolio.api.app.ports.out.DataBaseIntegration;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import dev.guilhermealves.assets.portfolio.api.app.domain.entity.WalletDocument;
-import dev.guilhermealves.assets.portfolio.api.app.ports.out.DataBaseIntegration;
+import java.util.*;
 
 @Service
 @Slf4j

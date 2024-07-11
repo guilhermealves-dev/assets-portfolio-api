@@ -1,10 +1,10 @@
 package dev.guilhermealves.assets.portfolio.api.app.domain.entity;
 
-import java.math.BigDecimal;
-
 import com.google.cloud.firestore.DocumentReference;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.math.BigDecimal;
 
 @Getter
 @Setter

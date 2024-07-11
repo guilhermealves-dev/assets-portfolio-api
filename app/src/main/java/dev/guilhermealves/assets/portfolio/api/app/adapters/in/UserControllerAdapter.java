@@ -1,7 +1,8 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.in;
 
-import dev.guilhermealves.assets.portfolio.api.app.domain.core.WalletCore;
-import dev.guilhermealves.assets.portfolio.api.app.domain.entity.WalletDocument;
+import dev.guilhermealves.assets.portfolio.api.app.domain.core.UserCore;
+import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.User;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.Wallet;
 import dev.guilhermealves.assets.portfolio.api.app.ports.in.ControllerIntegration;
 import jakarta.validation.Valid;
@@ -17,16 +18,16 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @AllArgsConstructor
-@RequestMapping("wallets")
-public class WalletControllerAdapter implements ControllerIntegration<Wallet, WalletDocument, String> {
+@RequestMapping("users")
+public class UserControllerAdapter implements ControllerIntegration<User, UserDocument, String> {
 
-    private final WalletCore core;
+    private final UserCore core;
 
     @Override
     @PostMapping
-    public ResponseEntity<Wallet> create(@RequestBody @Valid WalletDocument wallet) {
+    public ResponseEntity<User> create(@RequestBody @Valid UserDocument user) {
         try {
-            return new ResponseEntity<>(core.create(wallet), HttpStatus.CREATED);
+            return new ResponseEntity<>(core.create(user), HttpStatus.CREATED);
         } catch (Throwable t) {
             log.error("Error on create");
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -35,9 +36,9 @@ public class WalletControllerAdapter implements ControllerIntegration<Wallet, Wa
 
     @Override
     @GetMapping("/{id}")
-    public ResponseEntity<Wallet> find(@PathVariable String id) {
+    public ResponseEntity<User> find(@PathVariable String id) {
         try {
-            Optional<Wallet> optional = core.findById(id);
+            Optional<User> optional = core.findById(id);
 
             if(optional.isPresent()){
                 return new ResponseEntity<>(optional.get(), HttpStatus.OK);
@@ -53,10 +54,10 @@ public class WalletControllerAdapter implements ControllerIntegration<Wallet, Wa
 
     @Override
     @GetMapping
-    public ResponseEntity<List<Wallet>> list() {
+    public ResponseEntity<List<User>> list() {
         try {
-            List<Wallet> wallets = core.findAll();
-            return new ResponseEntity<>(wallets, HttpStatus.OK);
+            List<User> users = core.findAll();
+            return new ResponseEntity<>(users, HttpStatus.OK);
         } catch (Throwable t) {
             log.error("Error on list");
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -65,10 +66,10 @@ public class WalletControllerAdapter implements ControllerIntegration<Wallet, Wa
 
     @Override
     @PatchMapping("/{id}")
-    public ResponseEntity<Wallet> update(@PathVariable String id, @RequestBody @Valid WalletDocument wallet) {
+    public ResponseEntity<User> update(@PathVariable String id, @RequestBody @Valid UserDocument user) {
         try {
-            wallet.setId(id);
-            return new ResponseEntity<>(core.update(wallet), HttpStatus.ACCEPTED);
+            user.setId(id);
+            return new ResponseEntity<>(core.update(user), HttpStatus.ACCEPTED);
 
         } catch (Throwable t) {
             log.error("Error on update");

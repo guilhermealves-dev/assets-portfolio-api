@@ -1,8 +1,8 @@
 package dev.guilhermealves.assets.portfolio.api.app.ports.in;
 
-import java.util.List;
-
 import org.springframework.http.ResponseEntity;
+
+import java.util.List;
 
 public interface ControllerIntegration<R, T, ID> {
 

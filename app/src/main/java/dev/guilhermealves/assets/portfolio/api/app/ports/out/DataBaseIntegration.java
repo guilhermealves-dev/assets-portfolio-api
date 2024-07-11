@@ -2,7 +2,6 @@ package dev.guilhermealves.assets.portfolio.api.app.ports.out;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 
 public interface DataBaseIntegration<T, ID> {
     public T create(T t) throws Exception;
