@@ -1,4 +1,4 @@
 ### VS Code ###
 .vscode/
 
-app/src/main/resources/serviceAccountKey.json
+/app/src/main/resources/serviceAccountKey.json
