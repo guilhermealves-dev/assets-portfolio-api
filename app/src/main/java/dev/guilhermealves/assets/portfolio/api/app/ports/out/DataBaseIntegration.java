@@ -5,11 +5,13 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 public interface DataBaseIntegration<T, ID> {
-    public T save(T t);
+    public T create(T t) throws Exception;
 
-    public Optional<T> findById(ID id) throws ExecutionException, InterruptedException;
+    public T update(T t) throws Exception;
 
-    public List<T> findAll() throws ExecutionException, InterruptedException;
+    public Optional<T> findById(ID id) throws Exception;
 
-    public void deleteById(ID id);
+    public List<T> findAll() throws Exception;
+
+    public void deleteById(ID id) throws Exception;
 }

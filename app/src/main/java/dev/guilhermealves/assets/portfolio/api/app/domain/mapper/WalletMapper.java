@@ -10,32 +10,35 @@ import dev.guilhermealves.assets.portfolio.api.app.domain.model.Wallet;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
+import org.mapstruct.factory.Mappers;
 
-import java.util.concurrent.ExecutionException;
+import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface WalletMapper {
 
     @Mappings({
-        @Mapping(target = "user", expression = "java(getUser(document))")
+        @Mapping(target = "user", expression = "java(getUser(document))"),
     })
-    Wallet mapper(WalletDocument document) throws ExecutionException, InterruptedException;
+    Wallet mapper(WalletDocument document) throws Exception;
 
+    @Mappings({
+            @Mapping(target = "user_id", ignore = true)
+    })
     WalletDocument mapper(Wallet wallet);
 
-    default User getUser(WalletDocument document) throws ExecutionException, InterruptedException {
+    List<Wallet> mapperWalletList(List<WalletDocument> documents);
+
+    List<WalletDocument> mapperDocList(List<Wallet> wallets);
+
+    default User getUser(WalletDocument document) throws Exception {
         DocumentReference userDocRef = document.getUser_id();
         ApiFuture<DocumentSnapshot> userQuery = userDocRef.get();
         DocumentSnapshot userSnap = userQuery.get();
 
         UserDocument userDoc = userSnap.toObject(UserDocument.class);
+        UserMapper userMapper = Mappers.getMapper(UserMapper.class);
 
-
-        return User.builder()
-                .id(userDoc.getId())
-                .name(userDoc.getName())
-                .email(userDoc.getEmail())
-                .password(userDoc.getPassword())
-                .build();
+        return userMapper.mapper(userDoc);
     }
 }

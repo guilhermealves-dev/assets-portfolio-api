@@ -4,15 +4,15 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 
-public interface ControllerIntegration<T, ID> {
+public interface ControllerIntegration<R, T, ID> {
 
-    public ResponseEntity<T> create(T t);
+    public ResponseEntity<R> create(T t);
 
-    public ResponseEntity<T> find(ID id);
+    public ResponseEntity<R> find(ID id);
 
-    public ResponseEntity<List<T>> list();
+    public ResponseEntity<List<R>> list();
 
-    public ResponseEntity<T> update(ID id, T t);
+    public ResponseEntity<R> update(ID id, T t);
 
     public ResponseEntity<?> delete(ID id);
 }

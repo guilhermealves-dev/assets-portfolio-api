@@ -1,6 +1,7 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.in;
 
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.WalletFireBaseAdapter;
+import dev.guilhermealves.assets.portfolio.api.app.domain.core.WalletCore;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.WalletDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.Wallet;
 import dev.guilhermealves.assets.portfolio.api.app.ports.in.ControllerIntegration;
@@ -12,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Optional;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,20 +28,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RestController
 @AllArgsConstructor
 @RequestMapping("wallets")
-public class WalletControllerAdapter implements ControllerIntegration<Wallet, String> {
+public class WalletControllerAdapter implements ControllerIntegration<Wallet, WalletDocument, String> {
 
-    private final WalletFireBaseAdapter fireBaseAdapter;
-
-    @GetMapping("/hello")
-    public String hello() {
-        return "hello world";
-    }
+    private final WalletCore core;
 
     @Override
     @PostMapping
-    public ResponseEntity<Wallet> create(@RequestBody @Valid Wallet wallet) {
+    public ResponseEntity<Wallet> create(@RequestBody @Valid WalletDocument wallet) {
         try {
-            throw new UnsupportedOperationException("Unimplemented method 'create'");
+            return new ResponseEntity<>(core.create(wallet), HttpStatus.CREATED);
         } catch (Throwable t) {
             log.error("Error on create");
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -49,7 +47,14 @@ public class WalletControllerAdapter implements ControllerIntegration<Wallet, St
     @GetMapping("/{id}")
     public ResponseEntity<Wallet> find(@PathVariable String id) {
         try {
-            throw new UnsupportedOperationException("Unimplemented method 'find'");
+            Optional<Wallet> optional = core.findById(id);
+
+            if(optional.isPresent()){
+                return new ResponseEntity<>(optional.get(), HttpStatus.OK);
+            }
+
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
         } catch (Throwable t) {
             log.error("Error on find");
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -60,7 +65,7 @@ public class WalletControllerAdapter implements ControllerIntegration<Wallet, St
     @GetMapping
     public ResponseEntity<List<Wallet>> list() {
         try {
-            List<Wallet> wallets = fireBaseAdapter.findAll();
+            List<Wallet> wallets = core.findAll();
             return new ResponseEntity<>(wallets, HttpStatus.OK);
         } catch (Throwable t) {
             log.error("Error on list");
@@ -70,9 +75,11 @@ public class WalletControllerAdapter implements ControllerIntegration<Wallet, St
 
     @Override
     @PatchMapping("/{id}")
-    public ResponseEntity<Wallet> update(@PathVariable String id, @RequestBody @Valid Wallet Wallet) {
+    public ResponseEntity<Wallet> update(@PathVariable String id, @RequestBody @Valid WalletDocument wallet) {
         try {
-            throw new UnsupportedOperationException("Unimplemented method 'update'");
+            wallet.setId(id);
+            return new ResponseEntity<>(core.update(wallet), HttpStatus.ACCEPTED);
+
         } catch (Throwable t) {
             log.error("Error on update");
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -83,7 +90,8 @@ public class WalletControllerAdapter implements ControllerIntegration<Wallet, St
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable String id) {
         try {
-            throw new UnsupportedOperationException("Unimplemented method 'delete'");
+            core.deleteById(id);
+            return new ResponseEntity<>(HttpStatus.ACCEPTED);
         } catch (Throwable t) {
             log.error("Error on delete");
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);

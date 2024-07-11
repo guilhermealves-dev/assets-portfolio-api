@@ -1,15 +1,13 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.out;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.WriteResult;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.WalletMapper;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.Wallet;
@@ -23,32 +21,75 @@ import dev.guilhermealves.assets.portfolio.api.app.ports.out.DataBaseIntegration
 @Service
 @Slf4j
 @AllArgsConstructor
-public class WalletFireBaseAdapter implements DataBaseIntegration<Wallet, String> {
+public class WalletFireBaseAdapter implements DataBaseIntegration<WalletDocument, String> {
 
     private final Firestore dbFirestore;
-    private final WalletMapper mapper;
 
     private static final String COLLECTION_NAME = "wallets";
 
     @Override
-    public Wallet save(Wallet t) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'save'");
+    public WalletDocument create(WalletDocument wallet) throws Exception {
+        try{
+            wallet.setId(UUID.randomUUID().toString());
+
+            ApiFuture<WriteResult> collectionApiFuture = dbFirestore.collection(COLLECTION_NAME)
+                    .document(wallet.getId())
+                    .set(wallet);
+
+            log.info("Wallet created on - {}", collectionApiFuture.get().getUpdateTime().toString());
+
+            return wallet;
+
+        } catch (Throwable t){
+            log.error("Error save - {}", t.getMessage());
+            throw t;
+        }
     }
 
     @Override
-    public Optional<Wallet> findById(String id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'findById'");
+    public WalletDocument update(WalletDocument wallet) throws Exception {
+        try{
+            ApiFuture<WriteResult> collectionApiFuture = dbFirestore.collection(COLLECTION_NAME).document(wallet.getId())
+                    .set(wallet);
+
+            log.info("Wallet updated on - {}", collectionApiFuture.get().getUpdateTime().toString());
+
+            return wallet;
+
+        } catch (Throwable t){
+            log.error("Error update - {}", t.getMessage());
+            throw t;
+        }
     }
 
     @Override
-    public List<Wallet> findAll() throws ExecutionException, InterruptedException {
+    public Optional<WalletDocument> findById(String id) throws Exception {
+        try {
+            DocumentReference documentReference = dbFirestore.collection(COLLECTION_NAME).document(id);
+            ApiFuture<DocumentSnapshot> future = documentReference.get();
+            DocumentSnapshot document = future.get();
+
+            if (document.exists()) {
+                WalletDocument walletDoc = document.toObject(WalletDocument.class);
+
+                return Optional.of(walletDoc);
+            }
+
+            return Optional.empty();
+
+        } catch (Throwable t){
+            log.error("Error find By Id - {}", t.getMessage());
+            throw t;
+        }
+    }
+
+    @Override
+    public List<WalletDocument> findAll() throws Exception {
         try {
             Iterable<DocumentReference> documentReference = dbFirestore.collection(COLLECTION_NAME).listDocuments();
             Iterator<DocumentReference> iterator = documentReference.iterator();
 
-            List<Wallet> walletList = new ArrayList<>();
+            List<WalletDocument> walletList = new ArrayList<>();
 
             while (iterator.hasNext()) {
                 DocumentReference documentRef = iterator.next();
@@ -56,11 +97,11 @@ public class WalletFireBaseAdapter implements DataBaseIntegration<Wallet, String
                 DocumentSnapshot document = future.get();
 
                 WalletDocument walletDoc = document.toObject(WalletDocument.class);
-                Wallet wallet = mapper.mapper(walletDoc);
 
-                walletList.add(wallet);
+                walletList.add(walletDoc);
             }
             return walletList;
+
         } catch (Throwable t) {
             log.error("Error find all - {}", t.getMessage());
             throw t;
@@ -68,8 +109,15 @@ public class WalletFireBaseAdapter implements DataBaseIntegration<Wallet, String
     }
 
     @Override
-    public void deleteById(String id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'deleteById'");
+    public void deleteById(String id) throws Exception {
+        try {
+            ApiFuture<WriteResult> collectionApiFuture = dbFirestore.collection(COLLECTION_NAME).document(id).delete();
+
+            log.info("Wallet with ID {} has been deleted successfully - {}", id, collectionApiFuture.get().getUpdateTime().toString());
+
+        } catch (Throwable t) {
+            log.error("Error delete By Id - {}", t.getMessage());
+            throw t;
+        }
     }
 }

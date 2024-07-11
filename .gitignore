@@ -2,3 +2,5 @@
 .vscode/
 
 /app/src/main/resources/serviceAccountKey.json
+
+/doc/*
