@@ -72,14 +72,4 @@ public class WalletFireBaseAdapter implements DataBaseIntegration<Wallet, String
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'deleteById'");
     }
-
-    private UserDocument getUser(DocumentSnapshot document) throws ExecutionException, InterruptedException {
-        DocumentReference userDocRef = (DocumentReference) document.get("user");
-        ApiFuture<DocumentSnapshot> userQuery = userDocRef.get();
-        DocumentSnapshot userDoc = userQuery.get();
-        UserDocument user = userDoc.toObject(UserDocument.class);
-
-        return user;
-    }
-
 }
