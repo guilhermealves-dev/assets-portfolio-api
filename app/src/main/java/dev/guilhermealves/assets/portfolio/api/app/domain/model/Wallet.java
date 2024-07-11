@@ -1,4 +1,4 @@
-package dev.guilhermealves.assets.portfolio.api.app.domain.entity;
+package dev.guilhermealves.assets.portfolio.api.app.domain.model;
 
 import lombok.Getter;
 import lombok.Setter;

@@ -5,10 +5,10 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class User {
+public class AssetDocument {
 
     private String id;
     private String name;
-    private String email;
-    private String password;
+    private String type;
+    private String img_url;
 }

@@ -1,4 +1,4 @@
-package dev.guilhermealves.assets.portfolio.api.app.domain.entity;
+package dev.guilhermealves.assets.portfolio.api.app.domain.model;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,5 +10,5 @@ public class Asset {
     private String id;
     private String name;
     private String type;
-    private String img_url;
+    private String imgUrl;
 }
