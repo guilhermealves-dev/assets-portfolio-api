@@ -32,13 +32,13 @@ public interface WalletMapper {
     List<WalletDocument> mapperDocList(List<Wallet> wallets);
 
     default User getUser(WalletDocument document) throws Exception {
-        DocumentReference userDocRef = document.getUserId();
-        ApiFuture<DocumentSnapshot> userQuery = userDocRef.get();
-        DocumentSnapshot userSnap = userQuery.get();
+        DocumentReference docRef = document.getUserId();
+        ApiFuture<DocumentSnapshot> query = docRef.get();
+        DocumentSnapshot snapshot = query.get();
 
-        UserDocument userDoc = userSnap.toObject(UserDocument.class);
-        UserMapper userMapper = Mappers.getMapper(UserMapper.class);
+        UserDocument doc = snapshot.toObject(UserDocument.class);
+        UserMapper mapper = Mappers.getMapper(UserMapper.class);
 
-        return userMapper.mapper(userDoc);
+        return mapper.mapper(doc);
     }
 }
