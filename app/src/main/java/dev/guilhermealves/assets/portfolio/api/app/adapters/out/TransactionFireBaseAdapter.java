@@ -5,7 +5,6 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
-import dev.guilhermealves.assets.portfolio.api.app.domain.entity.AssetDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.TransactionDocument;
 import dev.guilhermealves.assets.portfolio.api.app.ports.out.DataBaseIntegration;
 import lombok.AllArgsConstructor;
