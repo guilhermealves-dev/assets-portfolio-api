@@ -5,7 +5,7 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
-import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
+import dev.guilhermealves.assets.portfolio.api.app.domain.entity.AssetDocument;
 import dev.guilhermealves.assets.portfolio.api.app.ports.out.DataBaseIntegration;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,24 +16,24 @@ import java.util.*;
 @Slf4j
 @Service
 @AllArgsConstructor
-public class UserFireBaseAdapter implements DataBaseIntegration<UserDocument, String> {
+public class AssetFireBaseAdapter implements DataBaseIntegration<AssetDocument, String> {
 
     private final Firestore dbFirestore;
 
-    public static final String COLLECTION_NAME = "users";
+    private static final String COLLECTION_NAME = "assets";
 
     @Override
-    public UserDocument create(UserDocument user) throws Exception {
+    public AssetDocument create(AssetDocument asset) throws Exception {
         try{
-            user.setId(UUID.randomUUID().toString());
+            asset.setId(UUID.randomUUID().toString());
 
             ApiFuture<WriteResult> collectionApiFuture = dbFirestore.collection(COLLECTION_NAME)
-                    .document(user.getId())
-                    .set(user);
+                    .document(asset.getId())
+                    .set(asset);
 
-            log.info("User created on - {}", collectionApiFuture.get().getUpdateTime().toString());
+            log.info("Asset created on - {}", collectionApiFuture.get().getUpdateTime().toString());
 
-            return user;
+            return asset;
 
         } catch (Throwable t){
             log.error("Error save - {}", t.getMessage());
@@ -42,14 +42,14 @@ public class UserFireBaseAdapter implements DataBaseIntegration<UserDocument, St
     }
 
     @Override
-    public UserDocument update(UserDocument user) throws Exception {
+    public AssetDocument update(AssetDocument asset) throws Exception {
         try{
-            ApiFuture<WriteResult> collectionApiFuture = dbFirestore.collection(COLLECTION_NAME).document(user.getId())
-                    .set(user);
+            ApiFuture<WriteResult> collectionApiFuture = dbFirestore.collection(COLLECTION_NAME).document(asset.getId())
+                    .set(asset);
 
-            log.info("User updated on - {}", collectionApiFuture.get().getUpdateTime().toString());
+            log.info("Asset updated on - {}", collectionApiFuture.get().getUpdateTime().toString());
 
-            return user;
+            return asset;
 
         } catch (Throwable t){
             log.error("Error update - {}", t.getMessage());
@@ -58,7 +58,7 @@ public class UserFireBaseAdapter implements DataBaseIntegration<UserDocument, St
     }
 
     @Override
-    public Optional<UserDocument> findById(String id) throws Exception {
+    public Optional<AssetDocument> findById(String id) throws Exception {
         try {
             DocumentReference documentReference = dbFirestore.collection(COLLECTION_NAME).document(id);
 
@@ -67,9 +67,9 @@ public class UserFireBaseAdapter implements DataBaseIntegration<UserDocument, St
             DocumentSnapshot document = future.get();
 
             if (document.exists()) {
-                UserDocument userDoc = document.toObject(UserDocument.class);
+                AssetDocument assetDoc = document.toObject(AssetDocument.class);
 
-                return Optional.of(userDoc);
+                return Optional.of(assetDoc);
             }
 
             return Optional.empty();
@@ -81,23 +81,23 @@ public class UserFireBaseAdapter implements DataBaseIntegration<UserDocument, St
     }
 
     @Override
-    public List<UserDocument> findAll() throws Exception {
+    public List<AssetDocument> findAll() throws Exception {
         try {
             Iterable<DocumentReference> documentReference = dbFirestore.collection(COLLECTION_NAME).listDocuments();
             Iterator<DocumentReference> iterator = documentReference.iterator();
 
-            List<UserDocument> userList = new ArrayList<>();
+            List<AssetDocument> assetList = new ArrayList<>();
 
             while (iterator.hasNext()) {
                 DocumentReference documentRef = iterator.next();
                 ApiFuture<DocumentSnapshot> future = documentRef.get();
                 DocumentSnapshot document = future.get();
 
-                UserDocument userDoc = document.toObject(UserDocument.class);
+                AssetDocument assetDoc = document.toObject(AssetDocument.class);
 
-                userList.add(userDoc);
+                assetList.add(assetDoc);
             }
-            return userList;
+            return assetList;
 
         } catch (Throwable t) {
             log.error("Error find all - {}", t.getMessage());
@@ -110,7 +110,7 @@ public class UserFireBaseAdapter implements DataBaseIntegration<UserDocument, St
         try {
             ApiFuture<WriteResult> collectionApiFuture = dbFirestore.collection(COLLECTION_NAME).document(id).delete();
 
-            log.info("User with ID {} has been deleted successfully - {}", id, collectionApiFuture.get().getUpdateTime().toString());
+            log.info("Asset with ID {} has been deleted successfully - {}", id, collectionApiFuture.get().getUpdateTime().toString());
 
         } catch (Throwable t) {
             log.error("Error delete By Id - {}", t.getMessage());

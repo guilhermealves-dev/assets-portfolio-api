@@ -8,6 +8,7 @@ import lombok.Setter;
 public class Asset {
 
     private String id;
+    private String symbol;
     private String name;
     private String type;
     private String imgUrl;

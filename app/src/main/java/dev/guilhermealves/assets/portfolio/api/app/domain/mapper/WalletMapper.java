@@ -23,7 +23,7 @@ public interface WalletMapper {
     Wallet mapper(WalletDocument document) throws Exception;
 
     @Mappings({
-            @Mapping(target = "user_id", ignore = true)
+            @Mapping(target = "userId", ignore = true)
     })
     WalletDocument mapper(Wallet wallet);
 
@@ -32,7 +32,7 @@ public interface WalletMapper {
     List<WalletDocument> mapperDocList(List<Wallet> wallets);
 
     default User getUser(WalletDocument document) throws Exception {
-        DocumentReference userDocRef = document.getUser_id();
+        DocumentReference userDocRef = document.getUserId();
         ApiFuture<DocumentSnapshot> userQuery = userDocRef.get();
         DocumentSnapshot userSnap = userQuery.get();
 

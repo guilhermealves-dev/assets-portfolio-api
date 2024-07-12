@@ -10,7 +10,7 @@ public class WalletDocument {
 
     private String id;
     private String name;
-    private DocumentReference user_id;
+    private DocumentReference userId;
     private String icon;
     private String color;
 }
