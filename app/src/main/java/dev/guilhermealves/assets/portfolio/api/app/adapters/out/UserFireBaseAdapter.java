@@ -117,4 +117,9 @@ public class UserFireBaseAdapter implements DataBaseIntegration<UserDocument, St
             throw t;
         }
     }
+
+    @Override
+    public DocumentReference getDocReference(String id) {
+        return dbFirestore.collection(COLLECTION_NAME).document(id);
+    }
 }

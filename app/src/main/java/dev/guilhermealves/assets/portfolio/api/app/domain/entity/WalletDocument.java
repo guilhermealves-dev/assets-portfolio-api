@@ -1,6 +1,7 @@
 package dev.guilhermealves.assets.portfolio.api.app.domain.entity;
 
 import com.google.cloud.firestore.DocumentReference;
+import com.google.firebase.database.Exclude;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,7 +11,11 @@ public class WalletDocument {
 
     private String id;
     private String name;
-    private DocumentReference userId;
+
+    @Exclude
+    private String userId;
+    private DocumentReference user;
+
     private String icon;
     private String color;
 }

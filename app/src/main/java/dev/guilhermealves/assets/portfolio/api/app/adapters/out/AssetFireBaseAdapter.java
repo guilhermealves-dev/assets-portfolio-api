@@ -20,7 +20,7 @@ public class AssetFireBaseAdapter implements DataBaseIntegration<AssetDocument, 
 
     private final Firestore dbFirestore;
 
-    private static final String COLLECTION_NAME = "assets";
+    public static final String COLLECTION_NAME = "assets";
 
     @Override
     public AssetDocument create(AssetDocument asset) throws Exception {
@@ -116,5 +116,10 @@ public class AssetFireBaseAdapter implements DataBaseIntegration<AssetDocument, 
             log.error("Error delete By Id - {}", t.getMessage());
             throw t;
         }
+    }
+
+    @Override
+    public DocumentReference getDocReference(String id) {
+        return dbFirestore.collection(COLLECTION_NAME).document(id);
     }
 }

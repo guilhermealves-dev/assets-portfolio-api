@@ -22,7 +22,7 @@ public class WalletCore {
 
     public Wallet create(WalletDocument walletDoc) throws Exception {
         try {
-            walletDoc.setUserId(securityCore.getCurrentUserDoc());
+            walletDoc.setUser(securityCore.getCurrentUserDoc());
 
             WalletDocument doc = walletFireBaseAdapter.create(walletDoc);
 
@@ -36,7 +36,7 @@ public class WalletCore {
 
     public Wallet update(WalletDocument walletDoc) throws Exception {
         try {
-            walletDoc.setUserId(securityCore.getCurrentUserDoc());
+            walletDoc.setUser(securityCore.getCurrentUserDoc());
 
             WalletDocument doc = walletFireBaseAdapter.update(walletDoc);
 

@@ -1,5 +1,7 @@
 package dev.guilhermealves.assets.portfolio.api.app.ports.out;
 
+import com.google.cloud.firestore.DocumentReference;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -13,4 +15,6 @@ public interface DataBaseIntegration<T, ID> {
     public List<T> findAll() throws Exception;
 
     public void deleteById(ID id) throws Exception;
+
+    public DocumentReference getDocReference(ID id);
 }

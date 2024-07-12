@@ -20,7 +20,7 @@ public class WalletFireBaseAdapter implements DataBaseIntegration<WalletDocument
 
     private final Firestore dbFirestore;
 
-    private static final String COLLECTION_NAME = "wallets";
+    public static final String COLLECTION_NAME = "wallets";
 
     @Override
     public WalletDocument create(WalletDocument wallet) throws Exception {
@@ -114,5 +114,10 @@ public class WalletFireBaseAdapter implements DataBaseIntegration<WalletDocument
             log.error("Error delete By Id - {}", t.getMessage());
             throw t;
         }
+    }
+
+    @Override
+    public DocumentReference getDocReference(String id) {
+        return dbFirestore.collection(COLLECTION_NAME).document(id);
     }
 }

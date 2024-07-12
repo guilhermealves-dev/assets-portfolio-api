@@ -20,7 +20,7 @@ public class TransactionFireBaseAdapter implements DataBaseIntegration<Transacti
 
     private final Firestore dbFirestore;
 
-    private static final String COLLECTION_NAME = "transactions";
+    public static final String COLLECTION_NAME = "transactions";
 
     @Override
     public TransactionDocument create(TransactionDocument transaction) throws Exception {
@@ -116,5 +116,10 @@ public class TransactionFireBaseAdapter implements DataBaseIntegration<Transacti
             log.error("Error delete By Id - {}", t.getMessage());
             throw t;
         }
+    }
+
+    @Override
+    public DocumentReference getDocReference(String id) {
+        return dbFirestore.collection(COLLECTION_NAME).document(id);
     }
 }
