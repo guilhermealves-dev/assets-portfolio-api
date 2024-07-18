@@ -4,8 +4,6 @@ import dev.guilhermealves.assets.portfolio.api.app.domain.entity.AssetDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.AssetRequest;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.AssetResponse;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Mappings;
 
 import java.util.List;
 
