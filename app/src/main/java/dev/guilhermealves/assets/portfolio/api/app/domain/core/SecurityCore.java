@@ -5,7 +5,7 @@ import com.google.cloud.firestore.Firestore;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.UserFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.UserMapper;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.User;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,18 +19,18 @@ public class SecurityCore {
     private final UserMapper userMapper;
     private final UserFireBaseAdapter userFireBaseAdapter;
 
-    public User getCurrentUser() throws Exception {
+    public UserResponse getCurrentUser() throws Exception {
         //TODO: search for active user
         Optional<UserDocument> opUser = userFireBaseAdapter.findById("8687cc99-a4e6-4fc3-9406-310f8f325b3f");
         if(opUser.isPresent()){
-            return userMapper.mapper(opUser.get());
+            return userMapper.map(opUser.get());
         }
 
         return null;
     }
 
     public DocumentReference getCurrentUserDoc() throws Exception {
-        User user = getCurrentUser();
+        UserResponse user = getCurrentUser();
         DocumentReference documentReference = dbFirestore.collection(UserFireBaseAdapter.COLLECTION_NAME).document(user.getId());
         return documentReference;
     }

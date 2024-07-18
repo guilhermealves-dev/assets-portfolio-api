@@ -1,8 +1,8 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.in;
 
 import dev.guilhermealves.assets.portfolio.api.app.domain.core.WalletCore;
-import dev.guilhermealves.assets.portfolio.api.app.domain.entity.WalletDocument;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.Wallet;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.WalletRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletResponse;
 import dev.guilhermealves.assets.portfolio.api.app.ports.in.ControllerIntegration;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -18,13 +18,13 @@ import java.util.Optional;
 @RestController
 @AllArgsConstructor
 @RequestMapping("wallets")
-public class WalletControllerAdapter implements ControllerIntegration<Wallet, WalletDocument, String> {
+public class WalletControllerAdapter implements ControllerIntegration<WalletResponse, WalletRequest, String> {
 
     private final WalletCore core;
 
     @Override
     @PostMapping
-    public ResponseEntity<Wallet> create(@RequestBody @Valid WalletDocument wallet) {
+    public ResponseEntity<WalletResponse> create(@RequestBody @Valid WalletRequest wallet) {
         try {
             return new ResponseEntity<>(core.create(wallet), HttpStatus.CREATED);
         } catch (Throwable t) {
@@ -35,9 +35,9 @@ public class WalletControllerAdapter implements ControllerIntegration<Wallet, Wa
 
     @Override
     @GetMapping("/{id}")
-    public ResponseEntity<Wallet> find(@PathVariable String id) {
+    public ResponseEntity<WalletResponse> find(@PathVariable String id) {
         try {
-            Optional<Wallet> optional = core.findById(id);
+            Optional<WalletResponse> optional = core.findById(id);
 
             if(optional.isPresent()){
                 return new ResponseEntity<>(optional.get(), HttpStatus.OK);
@@ -53,9 +53,9 @@ public class WalletControllerAdapter implements ControllerIntegration<Wallet, Wa
 
     @Override
     @GetMapping
-    public ResponseEntity<List<Wallet>> list() {
+    public ResponseEntity<List<WalletResponse>> list() {
         try {
-            List<Wallet> wallets = core.findAll();
+            List<WalletResponse> wallets = core.findAll();
             return new ResponseEntity<>(wallets, HttpStatus.OK);
         } catch (Throwable t) {
             log.error("Error on list");
@@ -65,7 +65,7 @@ public class WalletControllerAdapter implements ControllerIntegration<Wallet, Wa
 
     @Override
     @PatchMapping("/{id}")
-    public ResponseEntity<Wallet> update(@PathVariable String id, @RequestBody @Valid WalletDocument wallet) {
+    public ResponseEntity<WalletResponse> update(@PathVariable String id, @RequestBody @Valid WalletRequest wallet) {
         try {
             wallet.setId(id);
             return new ResponseEntity<>(core.update(wallet), HttpStatus.ACCEPTED);

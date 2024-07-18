@@ -1,8 +1,8 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.in;
 
 import dev.guilhermealves.assets.portfolio.api.app.domain.core.AssetCore;
-import dev.guilhermealves.assets.portfolio.api.app.domain.entity.AssetDocument;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.Asset;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.AssetRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.AssetResponse;
 import dev.guilhermealves.assets.portfolio.api.app.ports.in.ControllerIntegration;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -18,13 +18,13 @@ import java.util.Optional;
 @RestController
 @AllArgsConstructor
 @RequestMapping("assets")
-public class AssetControllerAdapter implements ControllerIntegration<Asset, AssetDocument, String> {
+public class AssetControllerAdapter implements ControllerIntegration<AssetResponse, AssetRequest, String> {
 
     private final AssetCore core;
 
     @Override
     @PostMapping
-    public ResponseEntity<Asset> create(@RequestBody @Valid AssetDocument asset) {
+    public ResponseEntity<AssetResponse> create(@RequestBody @Valid AssetRequest asset) {
         try {
             return new ResponseEntity<>(core.create(asset), HttpStatus.CREATED);
         } catch (Throwable t) {
@@ -35,9 +35,9 @@ public class AssetControllerAdapter implements ControllerIntegration<Asset, Asse
 
     @Override
     @GetMapping("/{id}")
-    public ResponseEntity<Asset> find(@PathVariable String id) {
+    public ResponseEntity<AssetResponse> find(@PathVariable String id) {
         try {
-            Optional<Asset> optional = core.findById(id);
+            Optional<AssetResponse> optional = core.findById(id);
 
             if(optional.isPresent()){
                 return new ResponseEntity<>(optional.get(), HttpStatus.OK);
@@ -53,9 +53,9 @@ public class AssetControllerAdapter implements ControllerIntegration<Asset, Asse
 
     @Override
     @GetMapping
-    public ResponseEntity<List<Asset>> list() {
+    public ResponseEntity<List<AssetResponse>> list() {
         try {
-            List<Asset> assets = core.findAll();
+            List<AssetResponse> assets = core.findAll();
             return new ResponseEntity<>(assets, HttpStatus.OK);
         } catch (Throwable t) {
             log.error("Error on list");
@@ -65,7 +65,7 @@ public class AssetControllerAdapter implements ControllerIntegration<Asset, Asse
 
     @Override
     @PatchMapping("/{id}")
-    public ResponseEntity<Asset> update(@PathVariable String id, @RequestBody @Valid AssetDocument asset) {
+    public ResponseEntity<AssetResponse> update(@PathVariable String id, @RequestBody @Valid AssetRequest asset) {
         try {
             asset.setId(id);
             return new ResponseEntity<>(core.update(asset), HttpStatus.ACCEPTED);

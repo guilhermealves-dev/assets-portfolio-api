@@ -5,8 +5,9 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.WalletDocument;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.User;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.Wallet;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.WalletRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.UserResponse;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
@@ -18,28 +19,26 @@ import java.util.List;
 public interface WalletMapper {
 
     @Mappings({
-        @Mapping(target = "user", expression = "java(getUser(document))"),
-    })
-    Wallet mapper(WalletDocument document) throws Exception;
-
-    @Mappings({
-            @Mapping(target = "userId", ignore = true),
+            @Mapping(target = "id", ignore = true),
             @Mapping(target = "user", ignore = true)
     })
-    WalletDocument mapper(Wallet wallet);
+    WalletDocument map(WalletRequest request);
 
-    List<Wallet> mapperWalletList(List<WalletDocument> documents);
+    @Mappings({
+        @Mapping(target = "user", expression = "java(getUser(document))"),
+    })
+    WalletResponse map(WalletDocument document) throws Exception;
 
-    List<WalletDocument> mapperDocList(List<Wallet> wallets);
+    List<WalletResponse> mapList(List<WalletDocument> documents);
 
-    default User getUser(WalletDocument document) throws Exception {
+    default UserResponse getUser(WalletDocument document) throws Exception {
         DocumentReference docRef = document.getUser();
         ApiFuture<DocumentSnapshot> query = docRef.get();
         DocumentSnapshot snapshot = query.get();
 
         UserDocument doc = snapshot.toObject(UserDocument.class);
-        UserMapper mapper = Mappers.getMapper(UserMapper.class);
+        UserMapper userMapper = Mappers.getMapper(UserMapper.class);
 
-        return mapper.mapper(doc);
+        return userMapper.map(doc);
     }
 }

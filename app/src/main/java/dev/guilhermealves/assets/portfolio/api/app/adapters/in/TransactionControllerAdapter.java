@@ -1,9 +1,8 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.in;
 
 import dev.guilhermealves.assets.portfolio.api.app.domain.core.TransactionCore;
-import dev.guilhermealves.assets.portfolio.api.app.domain.entity.TransactionDocument;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.Transaction;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.Wallet;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.TransactionRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.TransactionResponse;
 import dev.guilhermealves.assets.portfolio.api.app.ports.in.ControllerIntegration;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -19,13 +18,13 @@ import java.util.Optional;
 @RestController
 @AllArgsConstructor
 @RequestMapping("transactions")
-public class TransactionControllerAdapter implements ControllerIntegration<Transaction, TransactionDocument, String> {
+public class TransactionControllerAdapter implements ControllerIntegration<TransactionResponse, TransactionRequest, String> {
 
     private final TransactionCore core;
 
     @Override
     @PostMapping
-    public ResponseEntity<Transaction> create(@RequestBody @Valid TransactionDocument transaction) {
+    public ResponseEntity<TransactionResponse> create(@RequestBody @Valid TransactionRequest transaction) {
         try {
             return new ResponseEntity<>(core.create(transaction), HttpStatus.CREATED);
         } catch (Throwable t) {
@@ -36,9 +35,9 @@ public class TransactionControllerAdapter implements ControllerIntegration<Trans
 
     @Override
     @GetMapping("/{id}")
-    public ResponseEntity<Transaction> find(@PathVariable String id) {
+    public ResponseEntity<TransactionResponse> find(@PathVariable String id) {
         try {
-            Optional<Transaction> optional = core.findById(id);
+            Optional<TransactionResponse> optional = core.findById(id);
 
             if(optional.isPresent()){
                 return new ResponseEntity<>(optional.get(), HttpStatus.OK);
@@ -54,9 +53,9 @@ public class TransactionControllerAdapter implements ControllerIntegration<Trans
 
     @Override
     @GetMapping
-    public ResponseEntity<List<Transaction>> list() {
+    public ResponseEntity<List<TransactionResponse>> list() {
         try {
-            List<Transaction> transactions = core.findAll();
+            List<TransactionResponse> transactions = core.findAll();
             return new ResponseEntity<>(transactions, HttpStatus.OK);
         } catch (Throwable t) {
             log.error("Error on list");
@@ -66,7 +65,7 @@ public class TransactionControllerAdapter implements ControllerIntegration<Trans
 
     @Override
     @PatchMapping("/{id}")
-    public ResponseEntity<Transaction> update(@PathVariable String id, @RequestBody @Valid TransactionDocument transaction) {
+    public ResponseEntity<TransactionResponse> update(@PathVariable String id, @RequestBody @Valid TransactionRequest transaction) {
         try {
             transaction.setId(id);
             return new ResponseEntity<>(core.update(transaction), HttpStatus.ACCEPTED);

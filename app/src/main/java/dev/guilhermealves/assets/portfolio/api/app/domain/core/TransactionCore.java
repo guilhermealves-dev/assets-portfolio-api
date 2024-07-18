@@ -6,7 +6,8 @@ import dev.guilhermealves.assets.portfolio.api.app.adapters.out.TransactionFireB
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.WalletFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.TransactionDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.TransactionMapper;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.Transaction;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.TransactionRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.TransactionResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,17 +25,19 @@ public class TransactionCore {
     private final WalletFireBaseAdapter walletFireBaseAdapter;
     private final AssetFireBaseAdapter assetFireBaseAdapter;
 
-    public Transaction create(TransactionDocument transactionDoc) throws Exception {
+    public TransactionResponse create(TransactionRequest transaction) throws Exception {
         try {
-            DocumentReference wallet = walletFireBaseAdapter.getDocReference(transactionDoc.getWalletId());
-            DocumentReference asset = assetFireBaseAdapter.getDocReference(transactionDoc.getAssetId());
+            TransactionDocument docRequest = transactionMapper.map(transaction);
 
-            transactionDoc.setWallet(wallet);
-            transactionDoc.setAsset(asset);
+            DocumentReference wallet = walletFireBaseAdapter.getDocReference(transaction.getWalletId());
+            DocumentReference asset = assetFireBaseAdapter.getDocReference(transaction.getAssetId());
 
-            TransactionDocument doc = transactionFireBaseAdapter.create(transactionDoc);
+            docRequest.setWallet(wallet);
+            docRequest.setAsset(asset);
 
-            return transactionMapper.mapper(doc);
+            TransactionDocument doc = transactionFireBaseAdapter.create(docRequest);
+
+            return transactionMapper.map(doc);
 
         } catch (Throwable t){
             log.error("Error on create - {}", t.getMessage());
@@ -42,17 +45,19 @@ public class TransactionCore {
         }
     }
 
-    public Transaction update(TransactionDocument transactionDoc) throws Exception {
+    public TransactionResponse update(TransactionRequest transaction) throws Exception {
         try {
-            DocumentReference wallet = walletFireBaseAdapter.getDocReference(transactionDoc.getWalletId());
-            DocumentReference asset = assetFireBaseAdapter.getDocReference(transactionDoc.getAssetId());
+            TransactionDocument docRequest = transactionMapper.map(transaction);
 
-            transactionDoc.setWallet(wallet);
-            transactionDoc.setAsset(asset);
+            DocumentReference wallet = walletFireBaseAdapter.getDocReference(transaction.getWalletId());
+            DocumentReference asset = assetFireBaseAdapter.getDocReference(transaction.getAssetId());
 
-            TransactionDocument doc = transactionFireBaseAdapter.update(transactionDoc);
+            docRequest.setWallet(wallet);
+            docRequest.setAsset(asset);
 
-            return transactionMapper.mapper(doc);
+            TransactionDocument doc = transactionFireBaseAdapter.update(docRequest);
+
+            return transactionMapper.map(doc);
 
         } catch (Throwable t){
             log.error("Error on update - {}", t.getMessage());
@@ -60,11 +65,11 @@ public class TransactionCore {
         }
     }
 
-    public List<Transaction> findAll() throws Exception {
+    public List<TransactionResponse> findAll() throws Exception {
         try {
             List<TransactionDocument> transactionDocs = transactionFireBaseAdapter.findAll();
 
-            return transactionMapper.mapperTransactionList(transactionDocs);
+            return transactionMapper.mapList(transactionDocs);
 
         } catch (Throwable t){
             log.error("Error on find All - {}", t.getMessage());
@@ -72,12 +77,12 @@ public class TransactionCore {
         }
     }
 
-    public Optional<Transaction> findById(String id) throws Exception {
+    public Optional<TransactionResponse> findById(String id) throws Exception {
         try {
             Optional<TransactionDocument> optionalDoc = transactionFireBaseAdapter.findById(id);
 
             if(optionalDoc.isPresent()){
-                return Optional.of(transactionMapper.mapper(optionalDoc.get()));
+                return Optional.of(transactionMapper.map(optionalDoc.get()));
             }
 
             return Optional.empty();

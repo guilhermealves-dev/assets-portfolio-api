@@ -1,8 +1,8 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.in;
 
 import dev.guilhermealves.assets.portfolio.api.app.domain.core.UserCore;
-import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.User;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.UserRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.UserResponse;
 import dev.guilhermealves.assets.portfolio.api.app.ports.in.ControllerIntegration;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -18,13 +18,13 @@ import java.util.Optional;
 @RestController
 @AllArgsConstructor
 @RequestMapping("users")
-public class UserControllerAdapter implements ControllerIntegration<User, UserDocument, String> {
+public class UserControllerAdapter implements ControllerIntegration<UserResponse, UserRequest, String> {
 
     private final UserCore core;
 
     @Override
     @PostMapping
-    public ResponseEntity<User> create(@RequestBody @Valid UserDocument user) {
+    public ResponseEntity<UserResponse> create(@RequestBody @Valid UserRequest user) {
         try {
             return new ResponseEntity<>(core.create(user), HttpStatus.CREATED);
         } catch (Throwable t) {
@@ -35,9 +35,9 @@ public class UserControllerAdapter implements ControllerIntegration<User, UserDo
 
     @Override
     @GetMapping("/{id}")
-    public ResponseEntity<User> find(@PathVariable String id) {
+    public ResponseEntity<UserResponse> find(@PathVariable String id) {
         try {
-            Optional<User> optional = core.findById(id);
+            Optional<UserResponse> optional = core.findById(id);
 
             if(optional.isPresent()){
                 return new ResponseEntity<>(optional.get(), HttpStatus.OK);
@@ -53,9 +53,9 @@ public class UserControllerAdapter implements ControllerIntegration<User, UserDo
 
     @Override
     @GetMapping
-    public ResponseEntity<List<User>> list() {
+    public ResponseEntity<List<UserResponse>> list() {
         try {
-            List<User> users = core.findAll();
+            List<UserResponse> users = core.findAll();
             return new ResponseEntity<>(users, HttpStatus.OK);
         } catch (Throwable t) {
             log.error("Error on list");
@@ -65,7 +65,7 @@ public class UserControllerAdapter implements ControllerIntegration<User, UserDo
 
     @Override
     @PatchMapping("/{id}")
-    public ResponseEntity<User> update(@PathVariable String id, @RequestBody @Valid UserDocument user) {
+    public ResponseEntity<UserResponse> update(@PathVariable String id, @RequestBody @Valid UserRequest user) {
         try {
             user.setId(id);
             return new ResponseEntity<>(core.update(user), HttpStatus.ACCEPTED);

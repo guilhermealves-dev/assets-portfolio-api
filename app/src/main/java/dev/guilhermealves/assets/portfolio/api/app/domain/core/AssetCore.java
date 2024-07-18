@@ -3,7 +3,8 @@ package dev.guilhermealves.assets.portfolio.api.app.domain.core;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.AssetFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.AssetDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.AssetMapper;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.Asset;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.AssetRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.AssetResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,11 +20,12 @@ public class AssetCore {
     private final AssetFireBaseAdapter assetFireBaseAdapter;
     private final AssetMapper assetMapper;
 
-    public Asset create(AssetDocument assetDoc) throws Exception {
+    public AssetResponse create(AssetRequest asset) throws Exception {
         try {
-            AssetDocument doc = assetFireBaseAdapter.create(assetDoc);
+            AssetDocument docRequest = assetMapper.map(asset);
+            AssetDocument doc = assetFireBaseAdapter.create(docRequest);
 
-            return assetMapper.mapper(doc);
+            return assetMapper.map(doc);
 
         } catch (Throwable t){
             log.error("Error on create - {}", t.getMessage());
@@ -31,11 +33,12 @@ public class AssetCore {
         }
     }
 
-    public Asset update(AssetDocument assetDoc) throws Exception {
+    public AssetResponse update(AssetRequest asset) throws Exception {
         try {
-            AssetDocument doc = assetFireBaseAdapter.update(assetDoc);
+            AssetDocument docRequest = assetMapper.map(asset);
+            AssetDocument doc = assetFireBaseAdapter.update(docRequest);
 
-            return assetMapper.mapper(doc);
+            return assetMapper.map(doc);
 
         } catch (Throwable t){
             log.error("Error on update - {}", t.getMessage());
@@ -43,11 +46,11 @@ public class AssetCore {
         }
     }
 
-    public List<Asset> findAll() throws Exception {
+    public List<AssetResponse> findAll() throws Exception {
         try {
             List<AssetDocument> assetDocs = assetFireBaseAdapter.findAll();
 
-            return assetMapper.mapperAssetList(assetDocs);
+            return assetMapper.mapList(assetDocs);
 
         } catch (Throwable t){
             log.error("Error on find All - {}", t.getMessage());
@@ -55,12 +58,12 @@ public class AssetCore {
         }
     }
 
-    public Optional<Asset> findById(String id) throws Exception {
+    public Optional<AssetResponse> findById(String id) throws Exception {
         try {
             Optional<AssetDocument> optionalDoc = assetFireBaseAdapter.findById(id);
 
             if(optionalDoc.isPresent()){
-                return Optional.of(assetMapper.mapper(optionalDoc.get()));
+                return Optional.of(assetMapper.map(optionalDoc.get()));
             }
 
             return Optional.empty();
