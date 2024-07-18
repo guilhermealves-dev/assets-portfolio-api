@@ -1,7 +1,8 @@
 package dev.guilhermealves.assets.portfolio.api.app.domain.mapper;
 
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.AssetDocument;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.Asset;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.AssetRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.AssetResponse;
 import org.mapstruct.Mapper;
 
 import java.util.List;
@@ -9,11 +10,9 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface AssetMapper {
 
-    Asset mapper(AssetDocument document);
+    AssetDocument map(AssetRequest request);
 
-    AssetDocument mapper(Asset asset);
+    AssetResponse map(AssetDocument document);
 
-    List<Asset> mapperAssetList(List<AssetDocument> documents);
-
-    List<AssetDocument> mapperDocList(List<Asset> assets);
+    List<AssetResponse> mapList(List<AssetDocument> documents);
 }

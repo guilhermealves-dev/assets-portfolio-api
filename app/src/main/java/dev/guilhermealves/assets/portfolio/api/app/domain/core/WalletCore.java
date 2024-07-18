@@ -3,7 +3,8 @@ package dev.guilhermealves.assets.portfolio.api.app.domain.core;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.WalletFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.WalletDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.WalletMapper;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.Wallet;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.WalletRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,13 +21,14 @@ public class WalletCore {
     private final WalletMapper walletMapper;
     private final SecurityCore securityCore;
 
-    public Wallet create(WalletDocument walletDoc) throws Exception {
+    public WalletResponse create(WalletRequest wallet) throws Exception {
         try {
-            walletDoc.setUser(securityCore.getCurrentUserDoc());
+            WalletDocument docRequest = walletMapper.map(wallet);
+            docRequest.setUser(securityCore.getCurrentUserDoc());
 
-            WalletDocument doc = walletFireBaseAdapter.create(walletDoc);
+            WalletDocument doc = walletFireBaseAdapter.create(docRequest);
 
-            return walletMapper.mapper(doc);
+            return walletMapper.map(doc);
 
         } catch (Throwable t){
             log.error("Error on create - {}", t.getMessage());
@@ -34,13 +36,15 @@ public class WalletCore {
         }
     }
 
-    public Wallet update(WalletDocument walletDoc) throws Exception {
+    public WalletResponse update(WalletRequest wallet) throws Exception {
         try {
-            walletDoc.setUser(securityCore.getCurrentUserDoc());
+            WalletDocument docRequest = walletMapper.map(wallet);
 
-            WalletDocument doc = walletFireBaseAdapter.update(walletDoc);
+            docRequest.setUser(securityCore.getCurrentUserDoc());
 
-            return walletMapper.mapper(doc);
+            WalletDocument doc = walletFireBaseAdapter.update(docRequest);
+
+            return walletMapper.map(doc);
 
         } catch (Throwable t){
             log.error("Error on update - {}", t.getMessage());
@@ -48,11 +52,11 @@ public class WalletCore {
         }
     }
 
-    public List<Wallet> findAll() throws Exception {
+    public List<WalletResponse> findAll() throws Exception {
         try {
             List<WalletDocument> walletDocs = walletFireBaseAdapter.findAll();
 
-            return walletMapper.mapperWalletList(walletDocs);
+            return walletMapper.mapList(walletDocs);
 
         } catch (Throwable t){
             log.error("Error on find All - {}", t.getMessage());
@@ -60,12 +64,12 @@ public class WalletCore {
         }
     }
 
-    public Optional<Wallet> findById(String id) throws Exception {
+    public Optional<WalletResponse> findById(String id) throws Exception {
         try {
             Optional<WalletDocument> optionalDoc = walletFireBaseAdapter.findById(id);
 
             if(optionalDoc.isPresent()){
-                return Optional.of(walletMapper.mapper(optionalDoc.get()));
+                return Optional.of(walletMapper.map(optionalDoc.get()));
             }
 
             return Optional.empty();

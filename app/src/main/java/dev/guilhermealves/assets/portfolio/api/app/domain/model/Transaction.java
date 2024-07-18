@@ -1,6 +1,5 @@
 package dev.guilhermealves.assets.portfolio.api.app.domain.model;
 
-import com.google.cloud.Timestamp;
 import lombok.Getter;
 import lombok.Setter;
 

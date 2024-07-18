@@ -1,7 +1,8 @@
 package dev.guilhermealves.assets.portfolio.api.app.domain.mapper;
 
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.User;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.UserRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.UserResponse;
 import org.mapstruct.Mapper;
 
 import java.util.List;
@@ -9,11 +10,9 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
-    User mapper(UserDocument document);
+    UserDocument map(UserRequest request);
 
-    UserDocument mapper(User user);
+    UserResponse map(UserDocument document);
 
-    List<User> mapperUserList(List<UserDocument> documents);
-
-    List<UserDocument> mapperDocList(List<User> users);
+    List<UserResponse> mapList(List<UserDocument> documents);
 }

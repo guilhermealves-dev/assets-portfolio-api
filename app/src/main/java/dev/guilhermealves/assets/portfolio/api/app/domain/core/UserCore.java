@@ -3,7 +3,8 @@ package dev.guilhermealves.assets.portfolio.api.app.domain.core;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.UserFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.UserMapper;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.User;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.UserRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.UserResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,11 +20,12 @@ public class UserCore {
     private final UserFireBaseAdapter userFireBaseAdapter;
     private final UserMapper userMapper;
 
-    public User create(UserDocument userDoc) throws Exception {
+    public UserResponse create(UserRequest user) throws Exception {
         try {
-            UserDocument doc = userFireBaseAdapter.create(userDoc);
+            UserDocument docRequest = userMapper.map(user);
+            UserDocument doc = userFireBaseAdapter.create(docRequest);
 
-            return userMapper.mapper(doc);
+            return userMapper.map(doc);
 
         } catch (Throwable t){
             log.error("Error on create - {}", t.getMessage());
@@ -31,11 +33,12 @@ public class UserCore {
         }
     }
 
-    public User update(UserDocument userDoc) throws Exception {
+    public UserResponse update(UserRequest user) throws Exception {
         try {
-            UserDocument doc = userFireBaseAdapter.update(userDoc);
+            UserDocument docRequest = userMapper.map(user);
+            UserDocument doc = userFireBaseAdapter.update(docRequest);
 
-            return userMapper.mapper(doc);
+            return userMapper.map(doc);
 
         } catch (Throwable t){
             log.error("Error on update - {}", t.getMessage());
@@ -43,11 +46,11 @@ public class UserCore {
         }
     }
 
-    public List<User> findAll() throws Exception {
+    public List<UserResponse> findAll() throws Exception {
         try {
             List<UserDocument> userDocs = userFireBaseAdapter.findAll();
 
-            return userMapper.mapperUserList(userDocs);
+            return userMapper.mapList(userDocs);
 
         } catch (Throwable t){
             log.error("Error on find All - {}", t.getMessage());
@@ -55,12 +58,12 @@ public class UserCore {
         }
     }
 
-    public Optional<User> findById(String id) throws Exception {
+    public Optional<UserResponse> findById(String id) throws Exception {
         try {
             Optional<UserDocument> optionalDoc = userFireBaseAdapter.findById(id);
 
             if(optionalDoc.isPresent()){
-                return Optional.of(userMapper.mapper(optionalDoc.get()));
+                return Optional.of(userMapper.map(optionalDoc.get()));
             }
 
             return Optional.empty();
