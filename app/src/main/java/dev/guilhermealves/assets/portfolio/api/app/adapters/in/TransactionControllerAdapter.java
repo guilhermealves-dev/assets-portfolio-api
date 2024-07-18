@@ -18,7 +18,7 @@ import java.util.Optional;
 @RestController
 @AllArgsConstructor
 @RequestMapping("transactions")
-public class TransactionControllerAdapter implements ControllerIntegration<TransactionResponse, TransactionRequest, String> {
+public class TransactionControllerAdapter implements ControllerIntegration<TransactionRequest, TransactionResponse, String> {
 
     private final TransactionCore core;
 

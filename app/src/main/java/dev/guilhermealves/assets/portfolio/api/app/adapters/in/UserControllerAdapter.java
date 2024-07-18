@@ -18,7 +18,7 @@ import java.util.Optional;
 @RestController
 @AllArgsConstructor
 @RequestMapping("users")
-public class UserControllerAdapter implements ControllerIntegration<UserResponse, UserRequest, String> {
+public class UserControllerAdapter implements ControllerIntegration<UserRequest, UserResponse, String> {
 
     private final UserCore core;
 

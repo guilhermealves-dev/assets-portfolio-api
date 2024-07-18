@@ -18,7 +18,7 @@ import java.util.Optional;
 @RestController
 @AllArgsConstructor
 @RequestMapping("wallets")
-public class WalletControllerAdapter implements ControllerIntegration<WalletResponse, WalletRequest, String> {
+public class WalletControllerAdapter implements ControllerIntegration<WalletRequest, WalletResponse, String> {
 
     private final WalletCore core;
 

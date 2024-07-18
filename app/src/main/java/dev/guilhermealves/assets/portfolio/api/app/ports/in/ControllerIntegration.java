@@ -4,7 +4,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
-public interface ControllerIntegration<R, T, ID> {
+public interface ControllerIntegration<T, R, ID> {
 
     public ResponseEntity<R> create(T t);
 

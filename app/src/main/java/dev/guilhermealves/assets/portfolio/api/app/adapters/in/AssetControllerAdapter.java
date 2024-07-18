@@ -18,7 +18,7 @@ import java.util.Optional;
 @RestController
 @AllArgsConstructor
 @RequestMapping("assets")
-public class AssetControllerAdapter implements ControllerIntegration<AssetResponse, AssetRequest, String> {
+public class AssetControllerAdapter implements ControllerIntegration<AssetRequest, AssetResponse, String> {
 
     private final AssetCore core;
 
