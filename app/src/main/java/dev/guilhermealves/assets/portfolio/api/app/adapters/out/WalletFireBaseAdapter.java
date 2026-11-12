@@ -81,19 +81,12 @@ public class WalletFireBaseAdapter implements DataBaseIntegration<WalletDocument
     @Override
     public List<WalletDocument> findAll() throws Exception {
         try {
-            Iterable<DocumentReference> documentReference = dbFirestore.collection(COLLECTION_NAME).listDocuments();
-            Iterator<DocumentReference> iterator = documentReference.iterator();
+            ApiFuture<com.google.cloud.firestore.QuerySnapshot> future = dbFirestore.collection(COLLECTION_NAME).get();
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> documents = future.get().getDocuments();
 
             List<WalletDocument> walletList = new ArrayList<>();
-
-            while (iterator.hasNext()) {
-                DocumentReference documentRef = iterator.next();
-                ApiFuture<DocumentSnapshot> future = documentRef.get();
-                DocumentSnapshot document = future.get();
-
-                WalletDocument walletDoc = document.toObject(WalletDocument.class);
-
-                walletList.add(walletDoc);
+            for (com.google.cloud.firestore.QueryDocumentSnapshot document : documents) {
+                walletList.add(document.toObject(WalletDocument.class));
             }
             return walletList;
 

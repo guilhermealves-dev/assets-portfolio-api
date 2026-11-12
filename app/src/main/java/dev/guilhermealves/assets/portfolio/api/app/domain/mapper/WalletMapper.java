@@ -19,13 +19,12 @@ import java.util.List;
 public interface WalletMapper {
 
     @Mappings({
-            @Mapping(target = "id", ignore = true),
             @Mapping(target = "user", ignore = true)
     })
     WalletDocument map(WalletRequest request);
 
     @Mappings({
-        @Mapping(target = "user", expression = "java(getUser(document))"),
+            @Mapping(target = "user", expression = "java(getUser(document))")
     })
     WalletResponse map(WalletDocument document) throws Exception;
 
@@ -33,8 +32,16 @@ public interface WalletMapper {
 
     default UserResponse getUser(WalletDocument document) throws Exception {
         DocumentReference docRef = document.getUser();
+        if (docRef == null) {
+            return null;
+        }
+
         ApiFuture<DocumentSnapshot> query = docRef.get();
         DocumentSnapshot snapshot = query.get();
+
+        if (!snapshot.exists()) {
+            return null;
+        }
 
         UserDocument doc = snapshot.toObject(UserDocument.class);
         UserMapper userMapper = Mappers.getMapper(UserMapper.class);

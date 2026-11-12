@@ -1,5 +1,6 @@
 package dev.guilhermealves.assets.portfolio.api.app.domain.model;
 
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.TransactionType;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
 public class Transaction {
 
     private String id;
-    private String type;
+    private TransactionType type;
     private Asset asset;
     private Wallet wallet;
     private BigDecimal price;

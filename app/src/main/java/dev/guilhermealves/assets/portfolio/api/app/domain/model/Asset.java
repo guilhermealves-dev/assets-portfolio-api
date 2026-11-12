@@ -1,5 +1,6 @@
 package dev.guilhermealves.assets.portfolio.api.app.domain.model;
 
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.AssetType;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,6 +11,6 @@ public class Asset {
     private String id;
     private String symbol;
     private String name;
-    private String type;
+    private AssetType type;
     private String imgUrl;
 }

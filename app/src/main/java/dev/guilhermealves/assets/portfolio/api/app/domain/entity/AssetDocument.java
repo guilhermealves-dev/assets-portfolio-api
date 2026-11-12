@@ -7,9 +7,9 @@ import lombok.Setter;
 @Setter
 public class AssetDocument {
 
-    String id;
-    String symbol;
-    String name;
-    String type;
-    String imgUrl;
+    private String id;
+    private String symbol;
+    private String name;
+    private String type;
+    private String imgUrl;
 }

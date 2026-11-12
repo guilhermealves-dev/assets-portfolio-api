@@ -1,10 +1,7 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.out;
 
 import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.WriteResult;
+import com.google.cloud.firestore.*;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.TransactionDocument;
 import dev.guilhermealves.assets.portfolio.api.app.ports.out.DataBaseIntegration;
 import lombok.AllArgsConstructor;
@@ -24,8 +21,10 @@ public class TransactionFireBaseAdapter implements DataBaseIntegration<Transacti
 
     @Override
     public TransactionDocument create(TransactionDocument transaction) throws Exception {
-        try{
-            transaction.setId(UUID.randomUUID().toString());
+        try {
+            if (transaction.getId() == null || transaction.getId().isBlank()) {
+                transaction.setId(UUID.randomUUID().toString());
+            }
 
             ApiFuture<WriteResult> collectionApiFuture = dbFirestore.collection(COLLECTION_NAME)
                     .document(transaction.getId())
@@ -35,7 +34,7 @@ public class TransactionFireBaseAdapter implements DataBaseIntegration<Transacti
 
             return transaction;
 
-        } catch (Throwable t){
+        } catch (Throwable t) {
             log.error("Error save - {}", t.getMessage());
             throw t;
         }
@@ -43,7 +42,7 @@ public class TransactionFireBaseAdapter implements DataBaseIntegration<Transacti
 
     @Override
     public TransactionDocument update(TransactionDocument transaction) throws Exception {
-        try{
+        try {
             ApiFuture<WriteResult> collectionApiFuture = dbFirestore.collection(COLLECTION_NAME).document(transaction.getId())
                     .set(transaction);
 
@@ -51,7 +50,7 @@ public class TransactionFireBaseAdapter implements DataBaseIntegration<Transacti
 
             return transaction;
 
-        } catch (Throwable t){
+        } catch (Throwable t) {
             log.error("Error update - {}", t.getMessage());
             throw t;
         }
@@ -68,8 +67,7 @@ public class TransactionFireBaseAdapter implements DataBaseIntegration<Transacti
 
             if (document.exists()) {
                 TransactionDocument transactionDoc = document.toObject(TransactionDocument.class);
-
-                return Optional.of(transactionDoc);
+                return Optional.ofNullable(transactionDoc);
             }
 
             return Optional.empty();
@@ -83,24 +81,66 @@ public class TransactionFireBaseAdapter implements DataBaseIntegration<Transacti
     @Override
     public List<TransactionDocument> findAll() throws Exception {
         try {
-            Iterable<DocumentReference> documentReference = dbFirestore.collection(COLLECTION_NAME).listDocuments();
-            Iterator<DocumentReference> iterator = documentReference.iterator();
+            ApiFuture<QuerySnapshot> future = dbFirestore.collection(COLLECTION_NAME).get();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
 
-            List<TransactionDocument> assetList = new ArrayList<>();
-
-            while (iterator.hasNext()) {
-                DocumentReference documentRef = iterator.next();
-                ApiFuture<DocumentSnapshot> future = documentRef.get();
-                DocumentSnapshot document = future.get();
-
-                TransactionDocument transactionDoc = document.toObject(TransactionDocument.class);
-
-                assetList.add(transactionDoc);
+            List<TransactionDocument> list = new ArrayList<>();
+            for (QueryDocumentSnapshot document : documents) {
+                list.add(document.toObject(TransactionDocument.class));
             }
-            return assetList;
+            return list;
 
         } catch (Throwable t) {
             log.error("Error find all - {}", t.getMessage());
+            throw t;
+        }
+    }
+
+    public List<TransactionDocument> findByWalletId(String walletId) throws Exception {
+        try {
+            ApiFuture<QuerySnapshot> future = dbFirestore.collection(COLLECTION_NAME)
+                    .whereEqualTo("walletId", walletId)
+                    .get();
+
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            List<TransactionDocument> list = new ArrayList<>();
+            for (QueryDocumentSnapshot document : documents) {
+                list.add(document.toObject(TransactionDocument.class));
+            }
+            return list;
+        } catch (Throwable t) {
+            log.error("Error find by walletId - {}", t.getMessage());
+            throw t;
+        }
+    }
+
+    public List<TransactionDocument> findWithFilter(String walletId, String assetId, Integer page, Integer size) throws Exception {
+        try {
+            Query query = dbFirestore.collection(COLLECTION_NAME);
+
+            if (walletId != null && !walletId.isBlank()) {
+                query = query.whereEqualTo("walletId", walletId);
+            }
+
+            if (assetId != null && !assetId.isBlank()) {
+                query = query.whereEqualTo("assetId", assetId);
+            }
+
+            if (size != null && size > 0) {
+                int pageNumber = (page != null && page >= 0) ? page : 0;
+                query = query.limit(size).offset(pageNumber * size);
+            }
+
+            ApiFuture<QuerySnapshot> future = query.get();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+
+            List<TransactionDocument> list = new ArrayList<>();
+            for (QueryDocumentSnapshot document : documents) {
+                list.add(document.toObject(TransactionDocument.class));
+            }
+            return list;
+        } catch (Throwable t) {
+            log.error("Error find with filter - {}", t.getMessage());
             throw t;
         }
     }
@@ -109,7 +149,6 @@ public class TransactionFireBaseAdapter implements DataBaseIntegration<Transacti
     public void deleteById(String id) throws Exception {
         try {
             ApiFuture<WriteResult> collectionApiFuture = dbFirestore.collection(COLLECTION_NAME).document(id).delete();
-
             log.info("Transaction with ID {} has been deleted successfully - {}", id, collectionApiFuture.get().getUpdateTime().toString());
 
         } catch (Throwable t) {

@@ -1,16 +1,21 @@
 package dev.guilhermealves.assets.portfolio.api.app.domain.core;
 
+import com.google.cloud.firestore.DocumentReference;
+import dev.guilhermealves.assets.portfolio.api.app.adapters.out.UserFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.WalletFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.WalletDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.WalletMapper;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.WalletRequest;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletResponse;
+import dev.guilhermealves.assets.portfolio.api.app.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -18,74 +23,73 @@ import java.util.Optional;
 public class WalletCore {
 
     private final WalletFireBaseAdapter walletFireBaseAdapter;
+    private final UserFireBaseAdapter userFireBaseAdapter;
     private final WalletMapper walletMapper;
     private final SecurityCore securityCore;
 
     public WalletResponse create(WalletRequest wallet) throws Exception {
-        try {
-            WalletDocument docRequest = walletMapper.map(wallet);
-            docRequest.setUser(securityCore.getCurrentUserDoc());
+        WalletDocument docRequest = walletMapper.map(wallet);
+        docRequest.setId(wallet.getId());
 
-            WalletDocument doc = walletFireBaseAdapter.create(docRequest);
+        // Vincula estritamente a carteira ao usuário autenticado extraído do token
+        String currentUserId = securityCore.getCurrentUserId();
+        DocumentReference userDoc = userFireBaseAdapter.getDocReference(currentUserId);
+        docRequest.setUser(userDoc);
 
-            return walletMapper.map(doc);
-
-        } catch (Throwable t){
-            log.error("Error on create - {}", t.getMessage());
-            throw t;
-        }
+        WalletDocument doc = walletFireBaseAdapter.create(docRequest);
+        return walletMapper.map(doc);
     }
 
     public WalletResponse update(WalletRequest wallet) throws Exception {
-        try {
-            WalletDocument docRequest = walletMapper.map(wallet);
+        WalletDocument existing = walletFireBaseAdapter.findById(wallet.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Carteira", wallet.getId()));
 
-            docRequest.setUser(securityCore.getCurrentUserDoc());
+        validateWalletOwnership(existing);
 
-            WalletDocument doc = walletFireBaseAdapter.update(docRequest);
+        WalletDocument docRequest = walletMapper.map(wallet);
+        docRequest.setId(wallet.getId());
+        docRequest.setUser(existing.getUser()); // Preserva o dono original
 
-            return walletMapper.map(doc);
-
-        } catch (Throwable t){
-            log.error("Error on update - {}", t.getMessage());
-            throw t;
-        }
+        WalletDocument doc = walletFireBaseAdapter.update(docRequest);
+        return walletMapper.map(doc);
     }
 
     public List<WalletResponse> findAll() throws Exception {
-        try {
-            List<WalletDocument> walletDocs = walletFireBaseAdapter.findAll();
+        String currentUserId = securityCore.getCurrentUserId();
+        List<WalletDocument> allWallets = walletFireBaseAdapter.findAll();
 
-            return walletMapper.mapList(walletDocs);
+        // Filtro obrigatório de isolamento de dados: retorna apenas carteiras do usuário autenticado
+        List<WalletDocument> userWallets = allWallets.stream()
+                .filter(w -> w.getUser() != null && currentUserId.equals(w.getUser().getId()))
+                .collect(Collectors.toList());
 
-        } catch (Throwable t){
-            log.error("Error on find All - {}", t.getMessage());
-            throw t;
-        }
+        return walletMapper.mapList(userWallets);
     }
 
     public Optional<WalletResponse> findById(String id) throws Exception {
-        try {
-            Optional<WalletDocument> optionalDoc = walletFireBaseAdapter.findById(id);
-
-            if(optionalDoc.isPresent()){
-                return Optional.of(walletMapper.map(optionalDoc.get()));
-            }
-
-            return Optional.empty();
-
-        } catch (Throwable t){
-            log.error("Error on find By Id - {}", t.getMessage());
-            throw t;
+        Optional<WalletDocument> optionalDoc = walletFireBaseAdapter.findById(id);
+        if (optionalDoc.isPresent()) {
+            validateWalletOwnership(optionalDoc.get());
+            return Optional.of(walletMapper.map(optionalDoc.get()));
         }
+        return Optional.empty();
     }
 
     public void deleteById(String id) throws Exception {
-        try {
-            walletFireBaseAdapter.deleteById(id);
-        } catch (Throwable t){
-            log.error("Error on delete By Id - {}", t.getMessage());
-            throw t;
+        WalletDocument walletDoc = walletFireBaseAdapter.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Carteira", id));
+
+        validateWalletOwnership(walletDoc);
+        walletFireBaseAdapter.deleteById(id);
+    }
+
+    public void validateWalletOwnership(WalletDocument wallet) {
+        String currentUserId = securityCore.getCurrentUserId();
+        String ownerId = (wallet.getUser() != null) ? wallet.getUser().getId() : null;
+
+        if (ownerId != null && !ownerId.equals(currentUserId)) {
+            log.warn("Tentativa de acesso indevido à carteira {} pelo usuário {}", wallet.getId(), currentUserId);
+            throw new AccessDeniedException("Acesso negado: esta carteira pertence a outro usuário");
         }
     }
 }

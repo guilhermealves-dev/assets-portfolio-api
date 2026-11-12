@@ -3,7 +3,11 @@ package dev.guilhermealves.assets.portfolio.api.app.adapters.in;
 import dev.guilhermealves.assets.portfolio.api.app.domain.core.AssetCore;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.AssetRequest;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.AssetResponse;
+import dev.guilhermealves.assets.portfolio.api.app.exception.ResourceNotFoundException;
 import dev.guilhermealves.assets.portfolio.api.app.ports.in.ControllerIntegration;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,79 +16,94 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @RestController
 @AllArgsConstructor
 @RequestMapping("assets")
+@Tag(name = "Assets", description = "Endpoints para gerenciamento de ativos financeiros negociáveis")
 public class AssetControllerAdapter implements ControllerIntegration<AssetRequest, AssetResponse, String> {
 
     private final AssetCore core;
+    private final dev.guilhermealves.assets.portfolio.api.app.domain.core.MarketDataService marketDataService;
 
     @Override
     @PostMapping
+    @Operation(summary = "Cadastrar novo ativo", description = "Cria um novo ativo disponível para negociação (criptomoeda, ação, etc.)")
+    @ApiResponse(responseCode = "201", description = "Ativo cadastrado com sucesso")
     public ResponseEntity<AssetResponse> create(@RequestBody @Valid AssetRequest asset) {
         try {
             return new ResponseEntity<>(core.create(asset), HttpStatus.CREATED);
-        } catch (Throwable t) {
-            log.error("Error on create");
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     @GetMapping("/{id}")
+    @Operation(summary = "Buscar ativo por ID", description = "Retorna os detalhes de um ativo específico")
+    @ApiResponse(responseCode = "200", description = "Ativo encontrado")
+    @ApiResponse(responseCode = "404", description = "Ativo não encontrado")
     public ResponseEntity<AssetResponse> find(@PathVariable String id) {
         try {
-            Optional<AssetResponse> optional = core.findById(id);
-
-            if(optional.isPresent()){
-                return new ResponseEntity<>(optional.get(), HttpStatus.OK);
-            }
-
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-
-        } catch (Throwable t) {
-            log.error("Error on find");
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return core.findById(id)
+                    .map(ResponseEntity::ok)
+                    .orElseThrow(() -> new ResourceNotFoundException("Ativo", id));
+        } catch (ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     @GetMapping
+    @Operation(summary = "Listar ativos", description = "Retorna todos os ativos cadastrados")
+    @ApiResponse(responseCode = "200", description = "Lista de ativos retornada com sucesso")
     public ResponseEntity<List<AssetResponse>> list() {
         try {
-            List<AssetResponse> assets = core.findAll();
-            return new ResponseEntity<>(assets, HttpStatus.OK);
-        } catch (Throwable t) {
-            log.error("Error on list");
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.ok(core.findAll());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     @PatchMapping("/{id}")
+    @Operation(summary = "Atualizar ativo", description = "Atualiza os dados de um ativo existente")
+    @ApiResponse(responseCode = "200", description = "Ativo atualizado com sucesso")
+    @ApiResponse(responseCode = "404", description = "Ativo não encontrado")
     public ResponseEntity<AssetResponse> update(@PathVariable String id, @RequestBody @Valid AssetRequest asset) {
         try {
             asset.setId(id);
-            return new ResponseEntity<>(core.update(asset), HttpStatus.ACCEPTED);
-
-        } catch (Throwable t) {
-            log.error("Error on update");
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.ok(core.update(asset));
+        } catch (ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     @DeleteMapping("/{id}")
+    @Operation(summary = "Deletar ativo", description = "Remove um ativo pelo ID")
+    @ApiResponse(responseCode = "204", description = "Ativo removido com sucesso")
+    @ApiResponse(responseCode = "404", description = "Ativo não encontrado")
     public ResponseEntity<?> delete(@PathVariable String id) {
         try {
             core.deleteById(id);
-            return new ResponseEntity<>(HttpStatus.ACCEPTED);
-        } catch (Throwable t) {
-            log.error("Error on delete");
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.noContent().build();
+        } catch (ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Buscar ativos para cadastro", description = "Pesquisa ativos locais e do mercado (Binance, Brapi) por nome ou símbolo")
+    public ResponseEntity<List<dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.AssetSearchResultResponse>> search(
+            @RequestParam String query) {
+        return ResponseEntity.ok(marketDataService.searchAssets(query));
     }
 }

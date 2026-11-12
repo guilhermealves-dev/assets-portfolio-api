@@ -13,6 +13,8 @@ public class TransactionDocument {
 
     private String id;
     private String type;
+    private String walletId;
+    private String assetId;
     private DocumentReference asset;
     private DocumentReference wallet;
     private BigDecimal price;

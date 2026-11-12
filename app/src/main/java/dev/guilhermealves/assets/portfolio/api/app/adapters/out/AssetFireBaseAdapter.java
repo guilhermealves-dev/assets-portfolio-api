@@ -83,19 +83,12 @@ public class AssetFireBaseAdapter implements DataBaseIntegration<AssetDocument, 
     @Override
     public List<AssetDocument> findAll() throws Exception {
         try {
-            Iterable<DocumentReference> documentReference = dbFirestore.collection(COLLECTION_NAME).listDocuments();
-            Iterator<DocumentReference> iterator = documentReference.iterator();
+            ApiFuture<com.google.cloud.firestore.QuerySnapshot> future = dbFirestore.collection(COLLECTION_NAME).get();
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> documents = future.get().getDocuments();
 
             List<AssetDocument> assetList = new ArrayList<>();
-
-            while (iterator.hasNext()) {
-                DocumentReference documentRef = iterator.next();
-                ApiFuture<DocumentSnapshot> future = documentRef.get();
-                DocumentSnapshot document = future.get();
-
-                AssetDocument assetDoc = document.toObject(AssetDocument.class);
-
-                assetList.add(assetDoc);
+            for (com.google.cloud.firestore.QueryDocumentSnapshot document : documents) {
+                assetList.add(document.toObject(AssetDocument.class));
             }
             return assetList;
 
