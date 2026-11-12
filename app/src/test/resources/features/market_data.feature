@@ -31,3 +31,8 @@ Funcionalidade: Integração com Cotações de Mercado em Tempo Real (Market Dat
     Quando eu pesquiso ativos no mercado pelo termo "BTC"
     Então a busca deve retornar pelo menos 1 ativo com símbolo "BTC"
     E o ativo encontrado deve conter nome descritivo e preço atual
+
+  Cenário: Busca de ações americanas e ativos globais pelo ticker (NVDA)
+    Quando eu pesquiso ativos no mercado pelo termo "NVDA"
+    Então a busca deve retornar pelo menos 1 ativo com símbolo "NVDA"
+    E o ativo encontrado deve conter nome descritivo e preço atual

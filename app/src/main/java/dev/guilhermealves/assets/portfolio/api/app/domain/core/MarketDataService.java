@@ -2,6 +2,8 @@ package dev.guilhermealves.assets.portfolio.api.app.domain.core;
 
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.AssetFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.market.BinanceMarketDataAdapter;
+import dev.guilhermealves.assets.portfolio.api.app.adapters.out.market.BrapiMarketDataAdapter;
+import dev.guilhermealves.assets.portfolio.api.app.adapters.out.market.YahooFinanceMarketDataAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.AssetDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.AssetSearchResultResponse;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.ExchangeRateResponse;
@@ -28,13 +30,19 @@ public class MarketDataService {
 
     private final List<MarketPriceProviderPort> providers;
     private final BinanceMarketDataAdapter binanceMarketDataAdapter;
+    private final YahooFinanceMarketDataAdapter yahooFinanceMarketDataAdapter;
+    private final BrapiMarketDataAdapter brapiMarketDataAdapter;
     private final AssetFireBaseAdapter assetFireBaseAdapter;
     private final RestClient httpClient;
 
     public MarketDataService(List<MarketPriceProviderPort> providers,
                              BinanceMarketDataAdapter binanceMarketDataAdapter,
+                             YahooFinanceMarketDataAdapter yahooFinanceMarketDataAdapter,
+                             BrapiMarketDataAdapter brapiMarketDataAdapter,
                              AssetFireBaseAdapter assetFireBaseAdapter) {
         this.binanceMarketDataAdapter = binanceMarketDataAdapter;
+        this.yahooFinanceMarketDataAdapter = yahooFinanceMarketDataAdapter;
+        this.brapiMarketDataAdapter = brapiMarketDataAdapter;
         this.assetFireBaseAdapter = assetFireBaseAdapter;
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -72,6 +80,24 @@ public class MarketDataService {
                     }
                 } catch (Exception e) {
                     log.warn("Falha no provedor {} ao cotar {}: {}", provider.getProviderName(), symbol, e.getMessage());
+                }
+            }
+        }
+
+        // Auto-resolução: se o tipo informado não encontrou (ou não foi especificado), tenta outros mercados (ações US, ações BR, etc.)
+        if (type == null || type == AssetType.CRYPTO) {
+            for (MarketPriceProviderPort provider : providers) {
+                if (!provider.supports(assetType)) {
+                    try {
+                        Optional<MarketPriceResponse> responseOpt = provider.getPrice(symbol);
+                        if (responseOpt.isPresent()) {
+                            MarketPriceResponse response = responseOpt.get();
+                            enrichWithCurrencies(response, target);
+                            log.info("Cotação auto-resolvida para {} via provedor alternativo {}", symbol, provider.getProviderName());
+                            return Optional.of(response);
+                        }
+                    } catch (Exception ignored) {
+                    }
                 }
             }
         }
@@ -223,7 +249,31 @@ public class MarketDataService {
             log.warn("Erro ao buscar ativos locais: {}", e.getMessage());
         }
 
-        // 2. Se a busca bater com criptos populares conhecidas e ainda não estiver na lista, adiciona sugestão
+        // 2. Busca no Yahoo Finance (ações americanas, ETFs e ativos globais como NVDA, AAPL, SPY)
+        try {
+            List<AssetSearchResultResponse> yahooResults = yahooFinanceMarketDataAdapter.search(query);
+            for (AssetSearchResultResponse yr : yahooResults) {
+                if (results.stream().noneMatch(r -> r.getSymbol().equalsIgnoreCase(yr.getSymbol()))) {
+                    results.add(yr);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Erro ao buscar no Yahoo Finance: {}", e.getMessage());
+        }
+
+        // 3. Busca no Brapi (ações brasileiras, FIIs e BDRs como PETR4, VALE3, HGLG11)
+        try {
+            List<AssetSearchResultResponse> brapiResults = brapiMarketDataAdapter.search(query);
+            for (AssetSearchResultResponse br : brapiResults) {
+                if (results.stream().noneMatch(r -> r.getSymbol().equalsIgnoreCase(br.getSymbol()))) {
+                    results.add(br);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Erro ao buscar no Brapi: {}", e.getMessage());
+        }
+
+        // 4. Se a busca bater com criptos populares conhecidas e ainda não estiver na lista, adiciona sugestão
         List<String> popularCryptos = List.of("BTC", "ETH", "SOL", "BNB", "ADA", "DOGE", "XRP", "DOT", "AVAX", "LINK");
         for (String pop : popularCryptos) {
             if (pop.contains(q) && results.stream().noneMatch(r -> r.getSymbol().equalsIgnoreCase(pop))) {

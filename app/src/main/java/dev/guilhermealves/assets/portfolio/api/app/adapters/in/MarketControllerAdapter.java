@@ -29,8 +29,8 @@ public class MarketControllerAdapter {
     public ResponseEntity<MarketPriceResponse> getPrice(
             @Parameter(description = "Ticker ou símbolo do ativo (ex: BTC, ETH, PETR4, AAPL)")
             @PathVariable String symbol,
-            @Parameter(description = "Classe do ativo (padrão: CRYPTO)")
-            @RequestParam(required = false, defaultValue = "CRYPTO") AssetType type,
+            @Parameter(description = "Classe do ativo (opcional, ex: CRYPTO, STOCK_US, STOCK_BR)")
+            @RequestParam(required = false) AssetType type,
             @Parameter(description = "Moeda de destino (USD ou BRL, padrão: USD)")
             @RequestParam(required = false, defaultValue = "USD") String currency) {
 

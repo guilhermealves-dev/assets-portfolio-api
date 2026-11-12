@@ -1,6 +1,7 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.out.market;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.AssetSearchResultResponse;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.MarketPriceResponse;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.AssetType;
 import dev.guilhermealves.assets.portfolio.api.app.ports.out.MarketPriceProviderPort;
@@ -14,6 +15,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -83,6 +87,49 @@ public class YahooFinanceMarketDataAdapter implements MarketPriceProviderPort {
         }
 
         return Optional.empty();
+    }
+
+    public List<AssetSearchResultResponse> search(String query) {
+        if (query == null || query.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        List<AssetSearchResultResponse> results = new ArrayList<>();
+        try {
+            JsonNode response = restClient.get()
+                    .uri("/v1/finance/search?q={query}&quotesCount=5&newsCount=0", query.trim())
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            if (response != null && response.has("quotes") && response.get("quotes").isArray()) {
+                for (JsonNode q : response.get("quotes")) {
+                    String symbol = q.has("symbol") ? q.get("symbol").asText() : null;
+                    if (symbol == null || symbol.contains(".")) {
+                        continue;
+                    }
+
+                    String quoteType = q.has("quoteType") ? q.get("quoteType").asText() : "";
+                    AssetType type = "ETF".equalsIgnoreCase(quoteType) ? AssetType.ETF : AssetType.STOCK_US;
+                    String name = q.has("shortname") && !q.get("shortname").isNull() ? q.get("shortname").asText() :
+                            (q.has("longname") && !q.get("longname").isNull() ? q.get("longname").asText() : symbol);
+
+                    Optional<MarketPriceResponse> priceOpt = getPrice(symbol);
+                    BigDecimal price = priceOpt.map(MarketPriceResponse::getPrice).orElse(null);
+
+                    results.add(AssetSearchResultResponse.builder()
+                            .symbol(symbol)
+                            .name(name)
+                            .type(type)
+                            .currentPrice(price)
+                            .currency("USD")
+                            .origin("YAHOO")
+                            .build());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Erro ao buscar ativos no Yahoo Finance: {}", e.getMessage());
+        }
+        return results;
     }
 
     @Override
