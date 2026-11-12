@@ -3,6 +3,8 @@ package dev.guilhermealves.assets.portfolio.api.cucumber;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.guilhermealves.assets.portfolio.api.app.adapters.out.UserFireBaseAdapter;
+import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.AssetRequest;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.TransactionRequest;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.UserRequest;
@@ -39,6 +41,9 @@ public class SecurityMultiTenancyStepDefinitions {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private UserFireBaseAdapter userFireBaseAdapter;
+
     private MvcResult lastResult;
     private final Map<String, UserInfo> users = new HashMap<>();
     private final Map<String, String> walletIdsByUser = new HashMap<>();
@@ -54,12 +59,16 @@ public class SecurityMultiTenancyStepDefinitions {
         private String id;
         private String name;
         private String email;
+        private String role;
     }
 
     private String getAuthHeader(String userName) {
         UserInfo u = users.get(userName);
         if (u == null) {
             return "Bearer test-token-unknown";
+        }
+        if ("ADMIN".equalsIgnoreCase(u.getRole())) {
+            return "Bearer test-token-" + u.getId() + ":admin";
         }
         return "Bearer test-token-" + u.getId();
     }
@@ -100,7 +109,20 @@ public class SecurityMultiTenancyStepDefinitions {
             assertEquals(201, result.getResponse().getStatus());
             JsonNode node = objectMapper.readTree(result.getResponse().getContentAsString());
             String id = node.get("id").asText();
-            users.put(nome, new UserInfo(id, request.getName(), request.getEmail()));
+            users.put(nome, new UserInfo(id, request.getName(), request.getEmail(), "NORMAL"));
+        }
+    }
+
+    @Dado("que o usuário {string} está cadastrado com perfil {string}")
+    public void cadastrarUsuarioComPerfil(String nome, String perfil) throws Exception {
+        cadastrarUsuario(nome);
+        UserInfo u = users.get(nome);
+        u.setRole(perfil.toUpperCase());
+        Optional<UserDocument> opDoc = userFireBaseAdapter.findById(u.getId());
+        if (opDoc.isPresent()) {
+            UserDocument doc = opDoc.get();
+            doc.setRole(perfil.toUpperCase());
+            userFireBaseAdapter.update(doc);
         }
     }
 
@@ -262,6 +284,62 @@ public class SecurityMultiTenancyStepDefinitions {
         }
         assertTrue(list.stream().anyMatch(w -> w.getId().equals(expectedWalletId)),
                 "A carteira criada pelo usuário não foi encontrada na lista");
+    }
+
+    @Quando("o usuário {string} tenta executar a migração {string}")
+    @Quando("o usuário {string} executa a migração {string}")
+    public void executarMigracao(String nome, String endpoint) throws Exception {
+        lastResult = mockMvc.perform(post(endpoint)
+                        .header("Authorization", getAuthHeader(nome)))
+                .andReturn();
+    }
+
+    @Quando("o usuário {string} tenta listar todos os usuários do sistema")
+    @Quando("o usuário {string} lista todos os usuários do sistema")
+    public void listarTodosUsuarios(String nome) throws Exception {
+        lastResult = mockMvc.perform(get("/users")
+                        .header("Authorization", getAuthHeader(nome)))
+                .andReturn();
+    }
+
+    @Quando("o usuário {string} tenta consultar os dados cadastrais do {string}")
+    public void consultarDadosOutroUsuario(String nomeAtor, String nomeAlvo) throws Exception {
+        UserInfo alvo = users.get(nomeAlvo);
+        assertNotNull(alvo, "Usuário alvo não encontrado");
+        lastResult = mockMvc.perform(get("/users/{id}", alvo.getId())
+                        .header("Authorization", getAuthHeader(nomeAtor)))
+                .andReturn();
+    }
+
+    @Quando("o usuário {string} tenta deletar o usuário {string}")
+    public void deletarOutroUsuario(String nomeAtor, String nomeAlvo) throws Exception {
+        UserInfo alvo = users.get(nomeAlvo);
+        assertNotNull(alvo, "Usuário alvo não encontrado");
+        lastResult = mockMvc.perform(delete("/users/{id}", alvo.getId())
+                        .header("Authorization", getAuthHeader(nomeAtor)))
+                .andReturn();
+    }
+
+    @E("a migração deve reportar status de sucesso")
+    public void validarSucessoMigracao() throws Exception {
+        JsonNode node = objectMapper.readTree(lastResult.getResponse().getContentAsString());
+        assertEquals("SUCCESS", node.get("status").asText());
+        assertTrue(node.has("migratedUsers"));
+    }
+
+    @E("a lista de usuários deve conter tanto {string} quanto {string}")
+    public void validarListaUsuariosContem(String user1, String user2) throws Exception {
+        List<UserResponse> list = objectMapper.readValue(
+                lastResult.getResponse().getContentAsString(),
+                new TypeReference<List<UserResponse>>() {}
+        );
+        UserInfo u1 = users.get(user1);
+        UserInfo u2 = users.get(user2);
+        assertNotNull(u1);
+        assertNotNull(u2);
+
+        assertTrue(list.stream().anyMatch(u -> u.getId().equals(u1.getId())), "Usuário " + user1 + " não encontrado na lista");
+        assertTrue(list.stream().anyMatch(u -> u.getId().equals(u2.getId())), "Usuário " + user2 + " não encontrado na lista");
     }
 
     @After

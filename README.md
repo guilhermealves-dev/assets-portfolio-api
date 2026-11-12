@@ -105,7 +105,12 @@ Acompanhamento do progresso das funcionalidades e melhorias técnicas da API.
   - [x] Transações (`/transactions/**`): validação de propriedade da carteira em criação, atualização, deleção e busca (`403 Forbidden` em operações cruzadas entre usuários)
   - [x] Portfólio Analytics (`/portfolio/**`): impedimento de consulta não autorizada do resumo e posições de outros usuários
 - [x] **Rotas Públicas Preservadas:** Catálogo público de ativos (`GET /assets/**`), cotações e taxas de mercado (`/market/**`), documentação Swagger (`/swagger-ui/**`) e cadastro de usuários (`POST /users`)
-- [x] **Testes de Aceitação BDD (Cucumber):** Suíte automatizada (`security_multi_tenancy.feature`) validando rejeição de requisições anônimas (401), integridade de rotas públicas, perfil próprio (`/users/me`) e tentativas cruzadas de invasão de carteiras/transações (403)
+- [x] **Controle de Acesso Baseado em Perfis (RBAC - UserRole):**
+  - [x] Criação do perfil `UserRole` (`ADMIN` e `NORMAL`) com fallback automático para `NORMAL`
+  - [x] Endpoint de listagem global de usuários (`GET /users`) restrito exclusivamente para `ADMIN`
+  - [x] Proteção de dados cadastrais (`GET /users/{id}`, `PATCH /users/{id}`, `DELETE /users/{id}`): permitido apenas para o próprio usuário ou perfil `ADMIN`
+  - [x] Endpoint administrativo de migração (`POST /admin/migrate-data`): protegido exclusivamente para `ADMIN`, normalizando e preenchendo o atributo `role: "NORMAL"` em todos os usuários legados do Firestore
+- [x] **Testes de Aceitação BDD (Cucumber):** Suíte automatizada (`security_multi_tenancy.feature`) validando rejeição de requisições anônimas (401), integridade de rotas públicas, perfil próprio (`/users/me`), tentativas cruzadas de invasão (403), restrição de migração e listagem de usuários apenas para `ADMIN`
 
 ---
 

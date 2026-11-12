@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,6 +30,8 @@ public class AdminMigrationController {
     public ResponseEntity<Map<String, Object>> migrate() {
         try {
             return ResponseEntity.ok(migrationService.migrateExistingData());
+        } catch (AccessDeniedException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Erro ao executar migração de dados: " + e.getMessage(), e);
         }

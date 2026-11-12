@@ -2,6 +2,7 @@ package dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.UserRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
@@ -22,4 +23,7 @@ public class UserResponse {
 
     @Schema(description = "E-mail do usuário", example = "usuario@exemplo.com")
     private String email;
+
+    @Schema(description = "Tipo de perfil do usuário", example = "NORMAL")
+    private UserRole role;
 }

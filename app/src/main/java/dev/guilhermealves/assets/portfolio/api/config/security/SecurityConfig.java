@@ -50,15 +50,19 @@ public class SecurityConfig {
                         .requestMatchers("/market/**").permitAll()
                         // Catálogo de ativos (leitura e busca pública)
                         .requestMatchers(HttpMethod.GET, "/assets/**").permitAll()
-                        // Cadastro inicial de usuários e migrações
+                        // Cadastro inicial público de usuários
                         .requestMatchers(HttpMethod.POST, "/users").permitAll()
-                        .requestMatchers("/admin/**").permitAll()
+                        // Operações administrativas e migração de dados exclusivas para ADMIN
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // Listagem global de usuários restrita a ADMIN
+                        .requestMatchers(HttpMethod.GET, "/users").hasRole("ADMIN")
                         // Endpoints protegidos por autenticação
                         .requestMatchers(
                                 "/wallets/**",
                                 "/transactions/**",
                                 "/portfolio/**",
-                                "/users/me"
+                                "/users/me",
+                                "/users/**"
                         ).authenticated()
                         .anyRequest().authenticated()
                 )

@@ -36,3 +36,21 @@ Funcionalidade: Autenticação Firebase e Isolamento Multi-tenancy por Usuário
     Então o status da resposta deve ser 403
     Quando o usuário "Alice Silva" lista suas carteiras
     Então a lista deve conter apenas as carteiras da "Alice Silva"
+
+  Cenário: Controle de acesso RBAC entre perfis ADMIN e NORMAL para usuários e migrações
+    Dado que o usuário "Admin Master" está cadastrado com perfil "ADMIN"
+    E que o usuário "Usuario Comum" está cadastrado no sistema
+    Quando o usuário "Usuario Comum" tenta executar a migração "/admin/migrate-data"
+    Então o status da resposta deve ser 403
+    Quando o usuário "Usuario Comum" tenta listar todos os usuários do sistema
+    Então o status da resposta deve ser 403
+    Quando o usuário "Usuario Comum" tenta consultar os dados cadastrais do "Admin Master"
+    Então o status da resposta deve ser 403
+    Quando o usuário "Usuario Comum" tenta deletar o usuário "Admin Master"
+    Então o status da resposta deve ser 403
+    Quando o usuário "Admin Master" executa a migração "/admin/migrate-data"
+    Então o status da resposta deve ser 200
+    E a migração deve reportar status de sucesso
+    Quando o usuário "Admin Master" lista todos os usuários do sistema
+    Então o status da resposta deve ser 200
+    E a lista de usuários deve conter tanto "Admin Master" quanto "Usuario Comum"

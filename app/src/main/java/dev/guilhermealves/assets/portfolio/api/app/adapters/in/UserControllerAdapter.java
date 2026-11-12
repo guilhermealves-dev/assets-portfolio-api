@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -60,7 +61,7 @@ public class UserControllerAdapter implements ControllerIntegration<UserRequest,
             return core.findById(id)
                     .map(ResponseEntity::ok)
                     .orElseThrow(() -> new ResourceNotFoundException("Usuário", id));
-        } catch (ResourceNotFoundException e) {
+        } catch (ResourceNotFoundException | AccessDeniedException e) {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -69,11 +70,14 @@ public class UserControllerAdapter implements ControllerIntegration<UserRequest,
 
     @Override
     @GetMapping
-    @Operation(summary = "Listar usuários", description = "Retorna todos os usuários cadastrados")
+    @Operation(summary = "Listar usuários", description = "Retorna todos os usuários cadastrados (Requer perfil ADMIN)")
     @ApiResponse(responseCode = "200", description = "Lista de usuários retornada com sucesso")
+    @ApiResponse(responseCode = "403", description = "Acesso negado para usuários não-administradores")
     public ResponseEntity<List<UserResponse>> list() {
         try {
             return ResponseEntity.ok(core.findAll());
+        } catch (AccessDeniedException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -83,12 +87,13 @@ public class UserControllerAdapter implements ControllerIntegration<UserRequest,
     @PatchMapping("/{id}")
     @Operation(summary = "Atualizar usuário", description = "Atualiza os dados de um usuário")
     @ApiResponse(responseCode = "200", description = "Usuário atualizado com sucesso")
+    @ApiResponse(responseCode = "403", description = "Acesso negado")
     @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     public ResponseEntity<UserResponse> update(@PathVariable String id, @RequestBody @Valid UserRequest user) {
         try {
             user.setId(id);
             return ResponseEntity.ok(core.update(user));
-        } catch (ResourceNotFoundException e) {
+        } catch (ResourceNotFoundException | AccessDeniedException e) {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -99,12 +104,13 @@ public class UserControllerAdapter implements ControllerIntegration<UserRequest,
     @DeleteMapping("/{id}")
     @Operation(summary = "Deletar usuário", description = "Remove um usuário pelo ID")
     @ApiResponse(responseCode = "204", description = "Usuário removido com sucesso")
+    @ApiResponse(responseCode = "403", description = "Acesso negado para remover usuário de terceiros")
     @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     public ResponseEntity<?> delete(@PathVariable String id) {
         try {
             core.deleteById(id);
             return ResponseEntity.noContent().build();
-        } catch (ResourceNotFoundException e) {
+        } catch (ResourceNotFoundException | AccessDeniedException e) {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);

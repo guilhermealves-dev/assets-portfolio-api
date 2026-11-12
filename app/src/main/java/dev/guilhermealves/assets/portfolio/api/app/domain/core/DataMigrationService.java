@@ -4,6 +4,8 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.AssetFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.TransactionFireBaseAdapter;
+import dev.guilhermealves.assets.portfolio.api.app.adapters.out.UserFireBaseAdapter;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.UserRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -93,17 +95,38 @@ public class DataMigrationService {
             }
         }
 
+        // 3. Migrar Usuários (garantir atributo role em todos os usuários)
+        int migratedUsers = 0;
+        ApiFuture<QuerySnapshot> userFuture = dbFirestore.collection(UserFireBaseAdapter.COLLECTION_NAME).get();
+        List<QueryDocumentSnapshot> userDocs = userFuture.get().getDocuments();
+
+        for (QueryDocumentSnapshot doc : userDocs) {
+            String role = doc.getString("role");
+            if (role == null || role.trim().isEmpty()) {
+                batch.update(doc.getReference(), "role", UserRole.NORMAL.name());
+                migratedUsers++;
+                batchCount++;
+            }
+
+            if (batchCount >= 400) {
+                batch.commit().get();
+                batch = dbFirestore.batch();
+                batchCount = 0;
+            }
+        }
+
         if (batchCount > 0) {
             batch.commit().get();
         }
 
-        log.info("Migração concluída com sucesso! Transações atualizadas: {}, Ativos atualizados: {}",
-                migratedTransactions, migratedAssets);
+        log.info("Migração concluída com sucesso! Transações: {}, Ativos: {}, Usuários com role atualizada: {}",
+                migratedTransactions, migratedAssets, migratedUsers);
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "SUCCESS");
         result.put("migratedTransactions", migratedTransactions);
         result.put("migratedAssets", migratedAssets);
+        result.put("migratedUsers", migratedUsers);
         result.put("message", "Dados históricos normalizados e atualizados com sucesso no Firebase.");
 
         return result;

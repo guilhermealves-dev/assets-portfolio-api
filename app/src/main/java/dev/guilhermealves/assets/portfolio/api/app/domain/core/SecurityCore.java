@@ -6,6 +6,7 @@ import dev.guilhermealves.assets.portfolio.api.app.adapters.out.UserFireBaseAdap
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.UserDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.UserMapper;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.UserResponse;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.UserRole;
 import dev.guilhermealves.assets.portfolio.api.config.security.FirebaseAuthenticationToken;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +58,20 @@ public class SecurityCore {
                 .id(uid)
                 .name("Investidor " + uid.substring(0, Math.min(8, uid.length())))
                 .email(email)
+                .role(isCurrentUserAdmin() ? UserRole.ADMIN : UserRole.NORMAL)
                 .build();
+    }
+
+    /**
+     * Verifica se o usuário autenticado possui perfil de Administrador (ADMIN).
+     */
+    public boolean isCurrentUserAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equalsIgnoreCase(a.getAuthority()));
     }
 
     /**
