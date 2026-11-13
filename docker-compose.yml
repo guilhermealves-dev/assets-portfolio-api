@@ -1,0 +1,16 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: assets-portfolio-api
+    ports:
+      - "8080:8080"
+    environment:
+      - TZ=America/Sao_Paulo
+      - PORT=8080
+      - FIREBASE_KEY_PATH=/app/serviceAccountKey.json
+    volumes:
+      # Monta a chave do Firebase para que ela possa ser atualizada sem rebuildar o contêiner
+      - ./app/src/main/resources/serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    restart: unless-stopped

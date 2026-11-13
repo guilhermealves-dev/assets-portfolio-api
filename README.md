@@ -15,16 +15,30 @@ REST API em **Spring Boot** para gerenciamento de portfólio de ativos financeir
 
 ## 🚀 Requisitos e Configuração
 
+### Execução Local (Maven / Java):
 1. **Java 17+** instalado.
 2. **Maven 3.8+** (ou utilizar o wrapper `./mvnw` dentro de `app/`).
-3. **Execução dos Testes:**
+3. **Execução dos Testes Automatizados (BDD):**
    ```bash
    cd app
    ./mvnw test
    ```
 4. **Credenciais do Firebase:**
    * Obter a chave de conta de serviço no Firebase Console (`serviceAccountKey.json`).
-   * Configurar o arquivo no diretório de recursos da aplicação (`app/src/main/resources/serviceAccountKey.json`) ou apontar a variável no `application.properties`.
+   * Configurar o arquivo em `app/src/main/resources/serviceAccountKey.json` ou via variável de ambiente `FIREBASE_KEY_PATH` / `GOOGLE_APPLICATION_CREDENTIALS`.
+
+### 🐳 Execução via Docker / Docker Compose:
+A aplicação conta com `Dockerfile` multi-stage otimizado e `docker-compose.yml`:
+```bash
+# Iniciar a API em contêiner na porta 8080:
+docker compose up --build -d
+
+# Visualizar logs da aplicação:
+docker compose logs -f api
+```
+
+### 🌐 Integração com Frontends (CORS):
+A API já possui **CORS habilitado por padrão** (`CorsConfigurationSource`), aceitando requisições de origens locais comuns (`http://localhost:3000`, `http://localhost:5173`, etc.) com suporte a preflight `OPTIONS`, cabeçalhos de autenticação (`Authorization: Bearer <token>`) e leitura de `Content-Disposition` para downloads de CSV.
 
 ---
 
