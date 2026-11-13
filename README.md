@@ -115,17 +115,22 @@ Acompanhamento do progresso das funcionalidades e melhorias técnicas da API.
 ---
 
 ### 📈 Fase 5: Gráficos Históricos & Métricas Avançadas
-- [ ] **Evolução Patrimonial:** Armazenamento/reconstrução de histórico de saldo ao longo do tempo
-- [ ] **Endpoint de Gráfico de Desempenho:** `GET /wallets/{walletId}/chart?range=24H,7D,30D,90D,1Y,ALL`
-- [ ] **Métricas de Performance:** Identificação do ativo de melhor e pior desempenho no período (*Best/Worst Performer*)
-- [ ] **Suporte aos novos tipos de transação:**
-  - [ ] Transferências entre carteiras (`TRANSFER_IN` / `TRANSFER_OUT`)
-  - [ ] Trocas diretas (`SWAP`)
-  - [ ] Rendimentos passivos (`STAKING`, `DIVIDEND`, `AIRDROP`)
+- [x] **Evolução Patrimonial:** Reconstrução e amostragem de dados temporais de saldo, valor investido e lucro/prejuízo ao longo do tempo
+- [x] **Endpoints de Gráficos de Desempenho:**
+  - [x] `GET /wallets/{walletId}/chart?range=24H,7D,30D,90D,1Y,ALL&currency=USD,BRL` (Evolução histórica por carteira)
+  - [x] `GET /portfolio/chart?range=24H,7D,30D,90D,1Y,ALL&currency=USD,BRL` (Evolução histórica consolidada do usuário)
+- [x] **Métricas de Performance (*Best/Worst Performer*):** Identificação automática do ativo de maior e menor rentabilidade nos resumos analíticos (`/wallets/{id}/summary` e `/portfolio/summary`)
+- [x] **Suporte a Rendimentos e Proventos:** Tratamento de transações do tipo `DIVIDEND` (creditando lucros realizados diretamente sem afetar quantidade de cotas em custódia) e flexibilização de `@PositiveOrZero` em transações para suportar eventos a custo zero (`AIRDROP`, `STAKING`, `DIVIDEND`)
+- [x] **Padronização e Resolução de Logotipos de Ativos (Multi-Market CDNs):**
+  - [x] Resolução inteligente de ícones em alta resolução (`AssetIconResolver`): CoinCap (`@2x.png`) para criptoativos, Financial Modeling Prep para ações/ETFs dos EUA, Brapi Icons (`.svg`) para B3/FIIs e avatares vetoriais
+  - [x] Migração e saneamento de logotipos e dados legados no Firestore via `POST /admin/migrate-data`
+- [x] **Lançamento Inteligente de Transações por Símbolo (`assetSymbol`):** Registro de compras/vendas informando apenas o ticker do ativo (ex: `BTC`, `PETR4`, `NVDA`), com resolução e cadastro automático em tempo real consultando os provedores de mercado
+- [x] **Testes de Aceitação BDD (Cucumber):** Suíte automatizada com 26 cenários cobrindo gráficos temporais, cálculo de performers, transações de dividendos, isolamento multi-tenancy e registro automático de ativos
 
 ---
 
 ### 🌟 Fase 6: Funcionalidades Extras
+- [ ] **Transferências entre Carteiras & Trocas Diretas:** Suporte completo aos fluxos operacionais de `TRANSFER_IN` / `TRANSFER_OUT` e `SWAP`
 - [ ] **Importação e Exportação:** Suporte a upload de transações via arquivo CSV
 - [ ] **Watchlist:** Lista de ativos favoritos acompanhados pelo usuário
 - [ ] **Alertas de Preço:** Notificações de valor mínimo/máximo atingido
