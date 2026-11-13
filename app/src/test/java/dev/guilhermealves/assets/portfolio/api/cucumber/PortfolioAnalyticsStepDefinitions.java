@@ -64,7 +64,6 @@ public class PortfolioAnalyticsStepDefinitions {
         UserRequest request = new UserRequest();
         request.setName("Investidor Analítico " + runId);
         request.setEmail("analytics." + runId + "@portfolio.dev");
-        request.setPassword("senhaSegura123");
 
         MvcResult result = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)

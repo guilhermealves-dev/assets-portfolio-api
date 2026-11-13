@@ -54,7 +54,6 @@ public class TransactionAutoAssetStepDefinitions {
         UserRequest request = new UserRequest();
         request.setName("Investidor Auto Provision " + runId);
         request.setEmail("autoprovision." + runId + "@portfolio.dev");
-        request.setPassword("senhaSegura123");
 
         MvcResult result = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)

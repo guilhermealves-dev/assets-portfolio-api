@@ -61,7 +61,6 @@ public class PortfolioStepDefinitions {
         lastUserRequest = new UserRequest();
         lastUserRequest.setName(nome + " " + runId);
         lastUserRequest.setEmail("cucumber." + runId + "@portfolio.dev");
-        lastUserRequest.setPassword("senhaForte123");
 
         MvcResult result = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)

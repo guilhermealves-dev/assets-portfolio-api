@@ -71,7 +71,6 @@ public class Fase6StepDefinitions {
         UserRequest request = new UserRequest();
         request.setName("Investidor Fase6 " + runId);
         request.setEmail("fase6." + runId + "@portfolio.dev");
-        request.setPassword("senhaSegura123");
 
         MvcResult result = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -366,7 +365,6 @@ public class Fase6StepDefinitions {
         UserRequest request = new UserRequest();
         request.setName("Usuário B " + runId);
         request.setEmail("user.b." + runId + "@portfolio.dev");
-        request.setPassword("senhaSeguraB123");
 
         MvcResult userRes = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)

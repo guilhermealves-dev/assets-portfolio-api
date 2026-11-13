@@ -55,7 +55,6 @@ public class Fase5StepDefinitions {
         UserRequest request = new UserRequest();
         request.setName("Investidor Fase5 " + runId);
         request.setEmail("fase5." + runId + "@portfolio.dev");
-        request.setPassword("senhaSegura123");
 
         MvcResult result = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)

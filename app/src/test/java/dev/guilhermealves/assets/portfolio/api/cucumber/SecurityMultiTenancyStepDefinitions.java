@@ -99,7 +99,6 @@ public class SecurityMultiTenancyStepDefinitions {
             UserRequest request = new UserRequest();
             request.setName(nome + " " + runId);
             request.setEmail(nome.toLowerCase().replaceAll("\\s+", ".") + "." + runId + "@portfolio.dev");
-            request.setPassword("senhaSegura123");
 
             MvcResult result = mockMvc.perform(post("/users")
                             .contentType(MediaType.APPLICATION_JSON)

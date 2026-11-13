@@ -6,7 +6,6 @@ import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.UserRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -27,11 +26,6 @@ public class UserRequest {
     @Email(message = "O e-mail deve ser válido")
     @Schema(description = "E-mail de cadastro", example = "usuario@exemplo.com")
     private String email;
-
-    @NotBlank(message = "A senha é obrigatória")
-    @Size(min = 6, message = "A senha deve ter no mínimo 6 caracteres")
-    @Schema(description = "Senha do usuário", example = "senha123")
-    private String password;
 
     @Schema(description = "Tipo de perfil do usuário (NORMAL ou ADMIN, padrão: NORMAL)", example = "NORMAL")
     private UserRole role;
