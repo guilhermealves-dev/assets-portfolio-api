@@ -115,4 +115,37 @@ public class AssetFireBaseAdapter implements DataBaseIntegration<AssetDocument, 
     public DocumentReference getDocReference(String id) {
         return dbFirestore.collection(COLLECTION_NAME).document(id);
     }
+
+    public Optional<AssetDocument> findBySymbol(String symbol) throws Exception {
+        if (symbol == null || symbol.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            String trimmedUpper = symbol.trim().toUpperCase();
+            ApiFuture<com.google.cloud.firestore.QuerySnapshot> future = dbFirestore.collection(COLLECTION_NAME)
+                    .whereEqualTo("symbol", trimmedUpper)
+                    .limit(1)
+                    .get();
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = future.get().getDocuments();
+            if (!docs.isEmpty()) {
+                return Optional.of(docs.get(0).toObject(AssetDocument.class));
+            }
+
+            if (!trimmedUpper.equals(symbol.trim())) {
+                ApiFuture<com.google.cloud.firestore.QuerySnapshot> fallbackFuture = dbFirestore.collection(COLLECTION_NAME)
+                        .whereEqualTo("symbol", symbol.trim())
+                        .limit(1)
+                        .get();
+                List<com.google.cloud.firestore.QueryDocumentSnapshot> fallbackDocs = fallbackFuture.get().getDocuments();
+                if (!fallbackDocs.isEmpty()) {
+                    return Optional.of(fallbackDocs.get(0).toObject(AssetDocument.class));
+                }
+            }
+
+            return Optional.empty();
+        } catch (Throwable t) {
+            log.error("Error find by symbol - {}", t.getMessage());
+            throw t;
+        }
+    }
 }

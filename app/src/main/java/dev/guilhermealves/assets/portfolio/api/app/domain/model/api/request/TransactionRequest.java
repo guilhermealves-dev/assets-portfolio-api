@@ -1,9 +1,12 @@
 package dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.AssetType;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.TransactionType;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -26,9 +29,17 @@ public class TransactionRequest {
     @Schema(description = "Tipo da transação", example = "BUY")
     private TransactionType type;
 
-    @NotBlank(message = "O ID do ativo é obrigatório")
-    @Schema(description = "ID do ativo negociado", example = "btc-uuid")
+    @Schema(description = "ID ou Símbolo do ativo (ex: btc-uuid, ou NVDA, BTC, PETR4). Se não cadastrado, será criado automaticamente.", example = "NVDA")
     private String assetId;
+
+    @Schema(description = "Símbolo/Ticker do ativo alternativo ao assetId (ex: NVDA, BTC, PETR4)", example = "NVDA")
+    private String assetSymbol;
+
+    @Schema(description = "Tipo do ativo (opcional, para classificar na criação: CRYPTO, STOCK_US, STOCK_BR, ETF)", example = "STOCK_US")
+    private AssetType assetType;
+
+    @Schema(description = "Nome descritivo do ativo (opcional, usado caso o ativo não seja encontrado automaticamente)", example = "NVIDIA Corporation")
+    private String assetName;
 
     @NotBlank(message = "O ID da carteira é obrigatório")
     @Schema(description = "ID da carteira pertencente", example = "wallet-uuid")
@@ -57,4 +68,21 @@ public class TransactionRequest {
     @NotBlank(message = "A data/hora é obrigatória (ISO-8601: YYYY-MM-DDTHH:mm:ss)")
     @Schema(description = "Data e hora da transação", example = "2026-11-12T13:00:00")
     private String datetime;
+
+    @JsonIgnore
+    @AssertTrue(message = "O ID do ativo (assetId) ou o símbolo (assetSymbol) deve ser informado")
+    public boolean isAssetSpecified() {
+        return (assetId != null && !assetId.isBlank()) || (assetSymbol != null && !assetSymbol.isBlank());
+    }
+
+    @JsonIgnore
+    public String getEffectiveAssetIdentifier() {
+        if (assetId != null && !assetId.isBlank()) {
+            return assetId.trim();
+        }
+        if (assetSymbol != null && !assetSymbol.isBlank()) {
+            return assetSymbol.trim();
+        }
+        return null;
+    }
 }

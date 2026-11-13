@@ -4,6 +4,7 @@ import com.google.cloud.firestore.DocumentReference;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.AssetFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.TransactionFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.WalletFireBaseAdapter;
+import dev.guilhermealves.assets.portfolio.api.app.domain.entity.AssetDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.TransactionDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.WalletDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.TransactionMapper;
@@ -28,6 +29,7 @@ public class TransactionCore {
     private final TransactionFireBaseAdapter transactionFireBaseAdapter;
     private final WalletFireBaseAdapter walletFireBaseAdapter;
     private final AssetFireBaseAdapter assetFireBaseAdapter;
+    private final AssetCore assetCore;
     private final WalletCore walletCore;
     private final SecurityCore securityCore;
 
@@ -37,19 +39,24 @@ public class TransactionCore {
                 .orElseThrow(() -> new ResourceNotFoundException("Carteira", transaction.getWalletId()));
         walletCore.validateWalletOwnership(walletDoc);
 
-        // Valida se o ativo existe
-        assetFireBaseAdapter.findById(transaction.getAssetId())
-                .orElseThrow(() -> new ResourceNotFoundException("Ativo", transaction.getAssetId()));
+        // Valida e resolve (ou cria automaticamente) o ativo
+        AssetDocument assetDoc = assetCore.findOrCreateAsset(
+                transaction.getEffectiveAssetIdentifier(),
+                transaction.getAssetType(),
+                transaction.getAssetName()
+        );
+        String assetId = assetDoc.getId();
+        transaction.setAssetId(assetId);
 
         TransactionDocument docRequest = transactionMapper.map(transaction);
 
         DocumentReference wallet = walletFireBaseAdapter.getDocReference(transaction.getWalletId());
-        DocumentReference asset = assetFireBaseAdapter.getDocReference(transaction.getAssetId());
+        DocumentReference asset = assetFireBaseAdapter.getDocReference(assetId);
 
         docRequest.setWallet(wallet);
         docRequest.setAsset(asset);
         docRequest.setWalletId(transaction.getWalletId());
-        docRequest.setAssetId(transaction.getAssetId());
+        docRequest.setAssetId(assetId);
 
         TransactionDocument doc = transactionFireBaseAdapter.create(docRequest);
         return transactionMapper.map(doc);
@@ -66,15 +73,20 @@ public class TransactionCore {
             walletCore.validateWalletOwnership(targetWallet);
         }
 
-        if (transaction.getAssetId() != null) {
-            assetFireBaseAdapter.findById(transaction.getAssetId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Ativo", transaction.getAssetId()));
+        String aId = existingTx.getAssetId();
+        if (transaction.getEffectiveAssetIdentifier() != null) {
+            AssetDocument assetDoc = assetCore.findOrCreateAsset(
+                    transaction.getEffectiveAssetIdentifier(),
+                    transaction.getAssetType(),
+                    transaction.getAssetName()
+            );
+            aId = assetDoc.getId();
+            transaction.setAssetId(aId);
         }
 
         TransactionDocument docRequest = transactionMapper.map(transaction);
 
         String wId = transaction.getWalletId() != null ? transaction.getWalletId() : existingTx.getWalletId();
-        String aId = transaction.getAssetId() != null ? transaction.getAssetId() : existingTx.getAssetId();
 
         DocumentReference wallet = walletFireBaseAdapter.getDocReference(wId);
         DocumentReference asset = assetFireBaseAdapter.getDocReference(aId);

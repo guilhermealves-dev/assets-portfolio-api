@@ -9,7 +9,8 @@ public enum AssetType {
     ETF,
     FII,
     COMMODITY,
-    CASH;
+    CASH,
+    OTHER;
 
     @JsonCreator
     public static AssetType fromString(String value) {

@@ -5,6 +5,7 @@ import com.google.cloud.firestore.*;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.AssetFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.TransactionFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.UserFireBaseAdapter;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.AssetType;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.UserRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class DataMigrationService {
 
     private final Firestore dbFirestore;
+    private final AssetIconResolver assetIconResolver;
 
     public Map<String, Object> migrateExistingData() throws Exception {
         log.info("Iniciando migração e padronização dos dados no Firebase...");
@@ -76,14 +78,28 @@ public class DataMigrationService {
             }
         }
 
-        // 2. Migrar Ativos (Assets)
+        // 2. Migrar e Padronizar Ativos (Assets - types e URLs de logos)
         ApiFuture<QuerySnapshot> assetFuture = dbFirestore.collection(AssetFireBaseAdapter.COLLECTION_NAME).get();
         List<QueryDocumentSnapshot> assetDocs = assetFuture.get().getDocuments();
 
         for (QueryDocumentSnapshot doc : assetDocs) {
-            String type = doc.getString("type");
-            if (type != null && !type.equals(type.toUpperCase())) {
-                batch.update(doc.getReference(), "type", type.toUpperCase());
+            Map<String, Object> assetUpdates = new HashMap<>();
+
+            String typeStr = doc.getString("type");
+            AssetType type = AssetType.fromString(typeStr);
+            if (typeStr != null && !typeStr.equals(typeStr.toUpperCase())) {
+                assetUpdates.put("type", typeStr.toUpperCase());
+            }
+
+            String currentImgUrl = doc.getString("imgUrl");
+            String symbol = doc.getString("symbol");
+            String newImgUrl = assetIconResolver.resolveIconUrl(symbol, type);
+            if (currentImgUrl == null || !currentImgUrl.equals(newImgUrl)) {
+                assetUpdates.put("imgUrl", newImgUrl);
+            }
+
+            if (!assetUpdates.isEmpty()) {
+                batch.update(doc.getReference(), assetUpdates);
                 migratedAssets++;
                 batchCount++;
             }

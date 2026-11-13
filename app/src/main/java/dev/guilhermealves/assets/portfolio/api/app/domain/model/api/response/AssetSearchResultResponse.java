@@ -15,6 +15,9 @@ import java.math.BigDecimal;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AssetSearchResultResponse {
 
+    @Schema(description = "ID do ativo caso já cadastrado localmente (apenas para origin LOCAL)", example = "uuid-1234")
+    private String id;
+
     @Schema(description = "Símbolo/Ticker do ativo", example = "BTC")
     private String symbol;
 

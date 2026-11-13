@@ -33,17 +33,20 @@ public class MarketDataService {
     private final YahooFinanceMarketDataAdapter yahooFinanceMarketDataAdapter;
     private final BrapiMarketDataAdapter brapiMarketDataAdapter;
     private final AssetFireBaseAdapter assetFireBaseAdapter;
+    private final AssetIconResolver assetIconResolver;
     private final RestClient httpClient;
 
     public MarketDataService(List<MarketPriceProviderPort> providers,
                              BinanceMarketDataAdapter binanceMarketDataAdapter,
                              YahooFinanceMarketDataAdapter yahooFinanceMarketDataAdapter,
                              BrapiMarketDataAdapter brapiMarketDataAdapter,
-                             AssetFireBaseAdapter assetFireBaseAdapter) {
+                             AssetFireBaseAdapter assetFireBaseAdapter,
+                             AssetIconResolver assetIconResolver) {
         this.binanceMarketDataAdapter = binanceMarketDataAdapter;
         this.yahooFinanceMarketDataAdapter = yahooFinanceMarketDataAdapter;
         this.brapiMarketDataAdapter = brapiMarketDataAdapter;
         this.assetFireBaseAdapter = assetFireBaseAdapter;
+        this.assetIconResolver = assetIconResolver;
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Duration.ofSeconds(3).toMillis());
@@ -233,14 +236,18 @@ public class MarketDataService {
 
                     AssetType type = AssetType.fromString(a.getType());
                     Optional<MarketPriceResponse> priceOpt = getMarketPrice(a.getSymbol(), type, "USD");
+                    String logo = (a.getImgUrl() != null && assetIconResolver.isValidIconUrl(a.getImgUrl()))
+                            ? a.getImgUrl()
+                            : assetIconResolver.resolveIconUrl(a.getSymbol(), type);
 
                     results.add(AssetSearchResultResponse.builder()
+                            .id(a.getId())
                             .symbol(a.getSymbol())
                             .name(a.getName())
                             .type(type)
                             .currentPrice(priceOpt.map(MarketPriceResponse::getPrice).orElse(null))
                             .currency("USD")
-                            .imgUrl(a.getImgUrl())
+                            .imgUrl(logo)
                             .origin("LOCAL")
                             .build());
                 }
@@ -286,7 +293,7 @@ public class MarketDataService {
                             .type(AssetType.CRYPTO)
                             .currentPrice(pr.getPrice())
                             .currency("USD")
-                            .imgUrl(String.format("https://assets.coingecko.com/coins/images/%s/large/%s.png", pop.toLowerCase(), pop.toLowerCase()))
+                            .imgUrl(assetIconResolver.resolveIconUrl(pop, AssetType.CRYPTO))
                             .origin("MARKET")
                             .build());
                 }

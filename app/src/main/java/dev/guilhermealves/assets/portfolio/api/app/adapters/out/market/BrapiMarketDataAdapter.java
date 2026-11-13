@@ -24,8 +24,10 @@ import java.util.Optional;
 public class BrapiMarketDataAdapter implements MarketPriceProviderPort {
 
     private final RestClient restClient;
+    private final dev.guilhermealves.assets.portfolio.api.app.domain.core.AssetIconResolver assetIconResolver;
 
-    public BrapiMarketDataAdapter() {
+    public BrapiMarketDataAdapter(dev.guilhermealves.assets.portfolio.api.app.domain.core.AssetIconResolver assetIconResolver) {
+        this.assetIconResolver = assetIconResolver;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Duration.ofSeconds(3).toMillis());
         factory.setReadTimeout((int) Duration.ofSeconds(3).toMillis());
@@ -105,10 +107,13 @@ public class BrapiMarketDataAdapter implements MarketPriceProviderPort {
                     if (stock == null) continue;
 
                     String name = s.has("name") && !s.get("name").isNull() ? s.get("name").asText() : stock;
-                    String logo = s.has("logo") && !s.get("logo").isNull() ? s.get("logo").asText() : null;
                     BigDecimal close = s.has("close") && !s.get("close").isNull() ? new BigDecimal(s.get("close").asText()) : null;
                     String subType = s.has("subType") ? s.get("subType").asText() : "";
                     AssetType type = "fii".equalsIgnoreCase(subType) ? AssetType.FII : AssetType.STOCK_BR;
+
+                    String logo = (s.has("logo") && !s.get("logo").isNull() && !s.get("logo").asText().isBlank())
+                            ? s.get("logo").asText()
+                            : assetIconResolver.resolveIconUrl(stock, type);
 
                     results.add(AssetSearchResultResponse.builder()
                             .symbol(stock)

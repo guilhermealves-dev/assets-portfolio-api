@@ -41,12 +41,12 @@ public class AssetControllerAdapter implements ControllerIntegration<AssetReques
 
     @Override
     @GetMapping("/{id}")
-    @Operation(summary = "Buscar ativo por ID", description = "Retorna os detalhes de um ativo específico")
+    @Operation(summary = "Buscar ativo por ID ou Símbolo", description = "Retorna os detalhes de um ativo específico pelo ID ou ticker (ex: NVDA, BTC)")
     @ApiResponse(responseCode = "200", description = "Ativo encontrado")
     @ApiResponse(responseCode = "404", description = "Ativo não encontrado")
     public ResponseEntity<AssetResponse> find(@PathVariable String id) {
         try {
-            return core.findById(id)
+            return core.findByIdOrSymbol(id)
                     .map(ResponseEntity::ok)
                     .orElseThrow(() -> new ResourceNotFoundException("Ativo", id));
         } catch (ResourceNotFoundException e) {

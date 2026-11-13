@@ -25,8 +25,10 @@ import java.util.Optional;
 public class YahooFinanceMarketDataAdapter implements MarketPriceProviderPort {
 
     private final RestClient restClient;
+    private final dev.guilhermealves.assets.portfolio.api.app.domain.core.AssetIconResolver assetIconResolver;
 
-    public YahooFinanceMarketDataAdapter() {
+    public YahooFinanceMarketDataAdapter(dev.guilhermealves.assets.portfolio.api.app.domain.core.AssetIconResolver assetIconResolver) {
+        this.assetIconResolver = assetIconResolver;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Duration.ofSeconds(3).toMillis());
         factory.setReadTimeout((int) Duration.ofSeconds(3).toMillis());
@@ -115,6 +117,7 @@ public class YahooFinanceMarketDataAdapter implements MarketPriceProviderPort {
 
                     Optional<MarketPriceResponse> priceOpt = getPrice(symbol);
                     BigDecimal price = priceOpt.map(MarketPriceResponse::getPrice).orElse(null);
+                    String logo = assetIconResolver.resolveIconUrl(symbol, type);
 
                     results.add(AssetSearchResultResponse.builder()
                             .symbol(symbol)
@@ -122,6 +125,7 @@ public class YahooFinanceMarketDataAdapter implements MarketPriceProviderPort {
                             .type(type)
                             .currentPrice(price)
                             .currency("USD")
+                            .imgUrl(logo)
                             .origin("YAHOO")
                             .build());
                 }
