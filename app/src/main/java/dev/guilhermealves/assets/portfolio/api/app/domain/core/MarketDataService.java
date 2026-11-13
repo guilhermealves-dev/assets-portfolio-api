@@ -256,7 +256,29 @@ public class MarketDataService {
             log.warn("Erro ao buscar ativos locais: {}", e.getMessage());
         }
 
-        // 2. Busca no Yahoo Finance (ações americanas, ETFs e ativos globais como NVDA, AAPL, SPY)
+        // 2. Busca prioritária no catálogo de Criptomoedas conhecidas (Binance / CoinCap)
+        List<String> popularCryptos = List.of("BTC", "ETH", "SOL", "BNB", "ADA", "DOGE", "XRP", "DOT", "AVAX", "LINK", "PAXG", "USDT", "USDC", "NEAR", "SUI", "RENDER", "AAVE");
+        for (String pop : popularCryptos) {
+            if (pop.equalsIgnoreCase(q) || pop.contains(q)) {
+                if (results.stream().noneMatch(r -> r.getSymbol().equalsIgnoreCase(pop))) {
+                    Optional<MarketPriceResponse> priceOpt = getMarketPrice(pop, AssetType.CRYPTO, "USD");
+                    if (priceOpt.isPresent()) {
+                        MarketPriceResponse pr = priceOpt.get();
+                        results.add(AssetSearchResultResponse.builder()
+                                .symbol(pop)
+                                .name(getDisplayNameForCrypto(pop))
+                                .type(AssetType.CRYPTO)
+                                .currentPrice(pr.getPrice())
+                                .currency("USD")
+                                .imgUrl(assetIconResolver.resolveIconUrl(pop, AssetType.CRYPTO))
+                                .origin("MARKET")
+                                .build());
+                    }
+                }
+            }
+        }
+
+        // 3. Busca no Yahoo Finance (ações americanas, ETFs e ativos globais como NVDA, AAPL, SPY)
         try {
             List<AssetSearchResultResponse> yahooResults = yahooFinanceMarketDataAdapter.search(query);
             for (AssetSearchResultResponse yr : yahooResults) {
@@ -268,7 +290,7 @@ public class MarketDataService {
             log.warn("Erro ao buscar no Yahoo Finance: {}", e.getMessage());
         }
 
-        // 3. Busca no Brapi (ações brasileiras, FIIs e BDRs como PETR4, VALE3, HGLG11)
+        // 4. Busca no Brapi (ações brasileiras, FIIs e BDRs como PETR4, VALE3, HGLG11)
         try {
             List<AssetSearchResultResponse> brapiResults = brapiMarketDataAdapter.search(query);
             for (AssetSearchResultResponse br : brapiResults) {
@@ -278,26 +300,6 @@ public class MarketDataService {
             }
         } catch (Exception e) {
             log.warn("Erro ao buscar no Brapi: {}", e.getMessage());
-        }
-
-        // 4. Se a busca bater com criptos populares conhecidas e ainda não estiver na lista, adiciona sugestão
-        List<String> popularCryptos = List.of("BTC", "ETH", "SOL", "BNB", "ADA", "DOGE", "XRP", "DOT", "AVAX", "LINK");
-        for (String pop : popularCryptos) {
-            if (pop.contains(q) && results.stream().noneMatch(r -> r.getSymbol().equalsIgnoreCase(pop))) {
-                Optional<MarketPriceResponse> priceOpt = getMarketPrice(pop, AssetType.CRYPTO, "USD");
-                if (priceOpt.isPresent()) {
-                    MarketPriceResponse pr = priceOpt.get();
-                    results.add(AssetSearchResultResponse.builder()
-                            .symbol(pop)
-                            .name(getDisplayNameForCrypto(pop))
-                            .type(AssetType.CRYPTO)
-                            .currentPrice(pr.getPrice())
-                            .currency("USD")
-                            .imgUrl(assetIconResolver.resolveIconUrl(pop, AssetType.CRYPTO))
-                            .origin("MARKET")
-                            .build());
-                }
-            }
         }
 
         return results;
@@ -341,6 +343,9 @@ public class MarketDataService {
             case "DOT": return "Polkadot";
             case "AVAX": return "Avalanche";
             case "LINK": return "Chainlink";
+            case "PAXG": return "PAX Gold";
+            case "USDT": return "Tether USD";
+            case "USDC": return "USD Coin";
             default: return symbol.toUpperCase();
         }
     }

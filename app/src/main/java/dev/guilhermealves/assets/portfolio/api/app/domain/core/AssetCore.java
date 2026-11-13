@@ -89,7 +89,18 @@ public class AssetCore {
         // 2. Tenta buscar pelo símbolo no Firestore (ex: NVDA, BTC, PETR4)
         Optional<AssetDocument> bySymbolOpt = assetFireBaseAdapter.findBySymbol(trimmed);
         if (bySymbolOpt.isPresent()) {
-            return bySymbolOpt.get();
+            AssetDocument existing = bySymbolOpt.get();
+            // Se o usuário especificou explicitamente um tipo diferente do cadastrado (ex: foi criado como ETF mas é CRYPTO), corrige
+            if (hintType != null && !hintType.name().equalsIgnoreCase(existing.getType())) {
+                existing.setType(hintType.name());
+                String correctLogo = assetIconResolver.resolveIconUrl(existing.getSymbol(), hintType);
+                if (correctLogo != null) {
+                    existing.setImgUrl(correctLogo);
+                }
+                assetFireBaseAdapter.update(existing);
+                log.info("Corrigido tipo do ativo '{}' de {} para {}", existing.getSymbol(), existing.getType(), hintType);
+            }
+            return existing;
         }
 
         // 3. O ativo não existe no Firestore: buscar metadados de mercado e auto-provisionar
@@ -98,28 +109,44 @@ public class AssetCore {
         AssetType type = hintType != null ? hintType : AssetType.OTHER;
         String imgUrl = null;
 
-        // 3.1. Tenta resolver via MarketDataService.searchAssets
-        try {
-            List<AssetSearchResultResponse> searchResults = marketDataService.searchAssets(trimmed);
-            Optional<AssetSearchResultResponse> matchOpt = searchResults.stream()
-                    .filter(r -> r.getSymbol() != null && r.getSymbol().equalsIgnoreCase(trimmed))
-                    .findFirst();
-
-            if (matchOpt.isPresent()) {
-                AssetSearchResultResponse match = matchOpt.get();
-                symbol = match.getSymbol().toUpperCase();
-                if (match.getName() != null && !match.getName().isBlank()) {
-                    name = match.getName();
+        // Se o tipo foi explicitamente fornecido (ex: CRYPTO), busca cotação diretamente com esse tipo para evitar conflitos
+        if (hintType != null && hintType != AssetType.OTHER) {
+            try {
+                Optional<MarketPriceResponse> priceOpt = marketDataService.getMarketPrice(symbol, hintType, "USD");
+                if (priceOpt.isPresent()) {
+                    MarketPriceResponse pr = priceOpt.get();
+                    if (pr.getName() != null && !pr.getName().isBlank() && (hintName == null || hintName.isBlank())) {
+                        name = pr.getName();
+                    }
+                    type = hintType;
                 }
-                if (match.getType() != null) {
-                    type = match.getType();
-                }
-                if (match.getImgUrl() != null && !match.getImgUrl().isBlank()) {
-                    imgUrl = match.getImgUrl();
-                }
+            } catch (Exception e) {
+                log.warn("Erro ao buscar cotação direta para {} com tipo {}: {}", symbol, hintType, e.getMessage());
             }
-        } catch (Exception e) {
-            log.warn("Erro ao buscar metadados em searchAssets para {}: {}", trimmed, e.getMessage());
+        } else {
+            // 3.1. Tenta resolver via MarketDataService.searchAssets
+            try {
+                List<AssetSearchResultResponse> searchResults = marketDataService.searchAssets(trimmed);
+                Optional<AssetSearchResultResponse> matchOpt = searchResults.stream()
+                        .filter(r -> r.getSymbol() != null && r.getSymbol().equalsIgnoreCase(trimmed))
+                        .findFirst();
+
+                if (matchOpt.isPresent()) {
+                    AssetSearchResultResponse match = matchOpt.get();
+                    symbol = match.getSymbol().toUpperCase();
+                    if (match.getName() != null && !match.getName().isBlank() && (hintName == null || hintName.isBlank())) {
+                        name = match.getName();
+                    }
+                    if (match.getType() != null) {
+                        type = match.getType();
+                    }
+                    if (match.getImgUrl() != null && !match.getImgUrl().isBlank()) {
+                        imgUrl = match.getImgUrl();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Erro ao buscar metadados em searchAssets para {}: {}", trimmed, e.getMessage());
+            }
         }
 
         // 3.2. Se o tipo ainda for OTHER ou nome for o próprio ticker, tenta getMarketPrice
@@ -131,7 +158,7 @@ public class AssetCore {
                     if (price.getName() != null && !price.getName().isBlank()) {
                         name = price.getName();
                     }
-                    if (price.getType() != null) {
+                    if (price.getType() != null && hintType == null) {
                         type = price.getType();
                     }
                 }

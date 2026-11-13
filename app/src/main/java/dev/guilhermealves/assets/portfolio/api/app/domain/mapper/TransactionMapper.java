@@ -104,16 +104,32 @@ public interface TransactionMapper {
         }
 
         LocalDateTime convertedDateTime = LocalDateTimeConverter.convertTimeZone(ZoneId.systemDefault(), ZoneId.of("UTC"), localDateTime);
-        return Timestamp.parseTimestamp(convertedDateTime.toString());
+        String s = convertedDateTime.toString();
+        return Timestamp.parseTimestamp(s.endsWith("Z") ? s : s + "Z");
     }
 
     default Timestamp parseToTimestamp(TransactionRequest request) {
         if (request.getDatetime() == null || request.getDatetime().isBlank()) {
-            return null;
+            return Timestamp.now();
         }
 
-        LocalDateTime localDateTime = LocalDateTime.parse(request.getDatetime());
-        LocalDateTime convertedDateTime = LocalDateTimeConverter.convertTimeZone(ZoneId.systemDefault(), ZoneId.of("UTC"), localDateTime);
-        return Timestamp.parseTimestamp(convertedDateTime.toString());
+        String dt = request.getDatetime().trim();
+        try {
+            if (dt.endsWith("Z") || dt.contains("+") || (dt.contains("-") && dt.lastIndexOf("-") > 10)) {
+                java.time.Instant instant = java.time.Instant.parse(dt);
+                return Timestamp.ofTimeSecondsAndNanos(instant.getEpochSecond(), instant.getNano());
+            }
+
+            LocalDateTime localDateTime = LocalDateTime.parse(dt);
+            LocalDateTime convertedDateTime = LocalDateTimeConverter.convertTimeZone(ZoneId.systemDefault(), ZoneId.of("UTC"), localDateTime);
+            String s = convertedDateTime.toString();
+            return Timestamp.parseTimestamp(s.endsWith("Z") ? s : s + "Z");
+        } catch (Exception e) {
+            try {
+                return Timestamp.parseTimestamp(dt.endsWith("Z") ? dt : dt + "Z");
+            } catch (Exception ex) {
+                return Timestamp.now();
+            }
+        }
     }
 }
