@@ -1,24 +1,28 @@
 package dev.guilhermealves.assets.portfolio.api.app.adapters.in;
 
 import dev.guilhermealves.assets.portfolio.api.app.domain.core.PortfolioAnalyticsCore;
+import dev.guilhermealves.assets.portfolio.api.app.domain.core.TransactionCore;
 import dev.guilhermealves.assets.portfolio.api.app.domain.core.WalletCore;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.WalletRequest;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.HoldingResponse;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.PortfolioChartResponse;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletResponse;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletSummaryResponse;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.WalletSwapRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.WalletTransferRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.*;
 import dev.guilhermealves.assets.portfolio.api.app.exception.ResourceNotFoundException;
 import dev.guilhermealves.assets.portfolio.api.app.ports.in.ControllerIntegration;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -31,6 +35,7 @@ public class WalletControllerAdapter implements ControllerIntegration<WalletRequ
 
     private final WalletCore core;
     private final PortfolioAnalyticsCore analyticsCore;
+    private final TransactionCore transactionCore;
 
     @Override
     @PostMapping
@@ -154,6 +159,73 @@ public class WalletControllerAdapter implements ControllerIntegration<WalletRequ
         try {
             core.deleteById(id);
             return ResponseEntity.noContent().build();
+        } catch (ResourceNotFoundException | AccessDeniedException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @PostMapping("/transfer")
+    @Operation(summary = "Transferir ativo entre carteiras", description = "Transfere uma quantidade de determinado ativo entre duas carteiras pertencentes ao mesmo usuário")
+    @ApiResponse(responseCode = "200", description = "Transferência realizada com sucesso")
+    @ApiResponse(responseCode = "400", description = "Saldo insuficiente ou dados inválidos")
+    @ApiResponse(responseCode = "403", description = "Uma das carteiras não pertence ao usuário autenticado")
+    public ResponseEntity<WalletTransferResponse> transfer(@RequestBody @Valid WalletTransferRequest request) {
+        try {
+            return ResponseEntity.ok(transactionCore.transferBetweenWallets(request));
+        } catch (ResourceNotFoundException | AccessDeniedException | dev.guilhermealves.assets.portfolio.api.app.exception.BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @PostMapping("/{walletId}/swap")
+    @Operation(summary = "Troca direta de ativos (SWAP)", description = "Executa uma troca direta entre dois ativos dentro de uma carteira do usuário")
+    @ApiResponse(responseCode = "200", description = "Swap realizado com sucesso")
+    @ApiResponse(responseCode = "400", description = "Saldo insuficiente do ativo de origem ou dados inválidos")
+    @ApiResponse(responseCode = "403", description = "Carteira não pertence ao usuário autenticado")
+    public ResponseEntity<WalletSwapResponse> swap(
+            @PathVariable String walletId,
+            @RequestBody @Valid WalletSwapRequest request) {
+        try {
+            return ResponseEntity.ok(transactionCore.swapInWallet(walletId, request));
+        } catch (ResourceNotFoundException | AccessDeniedException | dev.guilhermealves.assets.portfolio.api.app.exception.BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @GetMapping(value = "/{walletId}/transactions/export", produces = "text/csv")
+    @Operation(summary = "Exportar transações da carteira em CSV", description = "Gera e exporta arquivo CSV com o histórico de transações desta carteira")
+    @ApiResponse(responseCode = "200", description = "CSV gerado com sucesso")
+    public ResponseEntity<byte[]> exportWalletTransactions(@PathVariable String walletId) {
+        try {
+            byte[] csvBytes = transactionCore.exportTransactionsToCsv(walletId);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"wallet_" + walletId + "_transactions.csv\"")
+                    .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                    .body(csvBytes);
+        } catch (ResourceNotFoundException | AccessDeniedException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @PostMapping(value = "/{walletId}/transactions/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Importar transações para a carteira via CSV", description = "Importa lote de transações diretamente para esta carteira")
+    @ApiResponse(responseCode = "200", description = "Processamento concluído com resumo")
+    public ResponseEntity<TransactionImportResponse> importWalletTransactions(
+            @PathVariable String walletId,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            if (file == null || file.isEmpty()) {
+                throw new IllegalArgumentException("O arquivo CSV não pode estar vazio");
+            }
+            return ResponseEntity.ok(transactionCore.importTransactionsFromCsv(file.getInputStream(), walletId));
         } catch (ResourceNotFoundException | AccessDeniedException e) {
             throw e;
         } catch (Exception e) {

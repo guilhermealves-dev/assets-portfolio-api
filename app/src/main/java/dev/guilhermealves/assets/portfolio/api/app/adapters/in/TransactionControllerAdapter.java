@@ -2,6 +2,7 @@ package dev.guilhermealves.assets.portfolio.api.app.adapters.in;
 
 import dev.guilhermealves.assets.portfolio.api.app.domain.core.TransactionCore;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.TransactionRequest;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.TransactionImportResponse;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.TransactionResponse;
 import dev.guilhermealves.assets.portfolio.api.app.exception.ResourceNotFoundException;
 import dev.guilhermealves.assets.portfolio.api.app.ports.in.ControllerIntegration;
@@ -12,10 +13,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -111,6 +115,51 @@ public class TransactionControllerAdapter implements ControllerIntegration<Trans
         try {
             core.deleteById(id);
             return ResponseEntity.noContent().build();
+        } catch (ResourceNotFoundException | AccessDeniedException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @GetMapping(value = "/export", produces = "text/csv")
+    @Operation(summary = "Exportar transações em CSV", description = "Gera e exporta um arquivo CSV com as transações do usuário (ou filtradas por carteira)")
+    @ApiResponse(responseCode = "200", description = "Arquivo CSV gerado com sucesso")
+    public ResponseEntity<byte[]> exportCsv(
+            @Parameter(description = "ID da carteira (opcional, exporta todas se omitido)")
+            @RequestParam(required = false) String walletId) {
+        try {
+            byte[] csvBytes = core.exportTransactionsToCsv(walletId);
+            String filename = (walletId != null && !walletId.isBlank())
+                    ? "transactions_wallet_" + walletId + ".csv"
+                    : "transactions_export.csv";
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                    .body(csvBytes);
+        } catch (ResourceNotFoundException | AccessDeniedException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Importar transações via CSV", description = "Processa upload de arquivo CSV com transações, cadastrando e auto-resolvendo ativos")
+    @ApiResponse(responseCode = "200", description = "Arquivo processado com resumo de importação")
+    @ApiResponse(responseCode = "400", description = "Arquivo ausente ou inválido")
+    public ResponseEntity<TransactionImportResponse> importCsv(
+            @Parameter(description = "Arquivo CSV com transações")
+            @RequestParam("file") MultipartFile file,
+            @Parameter(description = "ID padrão da carteira caso não conste no arquivo")
+            @RequestParam(required = false) String walletId) {
+        try {
+            if (file == null || file.isEmpty()) {
+                throw new IllegalArgumentException("O arquivo CSV não pode estar vazio");
+            }
+            TransactionImportResponse response = core.importTransactionsFromCsv(file.getInputStream(), walletId);
+            return ResponseEntity.ok(response);
         } catch (ResourceNotFoundException | AccessDeniedException e) {
             throw e;
         } catch (Exception e) {

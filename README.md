@@ -130,10 +130,19 @@ Acompanhamento do progresso das funcionalidades e melhorias técnicas da API.
 ---
 
 ### 🌟 Fase 6: Funcionalidades Extras
-- [ ] **Transferências entre Carteiras & Trocas Diretas:** Suporte completo aos fluxos operacionais de `TRANSFER_IN` / `TRANSFER_OUT` e `SWAP`
-- [ ] **Importação e Exportação:** Suporte a upload de transações via arquivo CSV
-- [ ] **Watchlist:** Lista de ativos favoritos acompanhados pelo usuário
-- [ ] **Alertas de Preço:** Notificações de valor mínimo/máximo atingido
+- [x] **Watchlist de Ativos Favoritos (CoinMarketCap Tracker):**
+  - [x] `POST /watchlist`: Adiciona ativos aos favoritos por `assetId` ou `assetSymbol` com resolução inteligente
+  - [x] `GET /watchlist?currency=USD,BRL`: Listagem dos favoritos do usuário com cotações em tempo real, variação 24h e conversão cambial
+  - [x] `DELETE /watchlist/{assetIdentifier}`: Remoção de ativos da lista de favoritos
+  - [x] `GET /watchlist/check/{assetIdentifier}`: Verificação rápida de presença na watchlist
+- [x] **Importação e Exportação de Transações em CSV:**
+  - [x] `GET /transactions/export` e `GET /wallets/{walletId}/transactions/export`: Exportação em formato CSV padronizado (RFC 4180 com BOM UTF-8) compatível com Excel e Google Sheets
+  - [x] `POST /transactions/import` e `POST /wallets/{walletId}/transactions/import`: Upload de arquivo CSV (`multipart/form-data`) para lançamento em lote com auto-resolução de ativos
+- [x] **Transferências entre Carteiras & Trocas Diretas (SWAP):**
+  - [x] `POST /wallets/transfer`: Transferência de ativos entre carteiras do mesmo usuário preservando o custo médio histórico sem gerar lucros ou prejuízos fictícios
+  - [x] `POST /wallets/{walletId}/swap`: Troca direta entre ativos na mesma carteira, liquidando a ponta de saída com PnL realizado e abrindo a nova posição
+  - [x] Bloqueio estrito de segurança multi-tenancy (`403 Forbidden`) para movimentações envolvendo carteiras de terceiros
+- [x] **Testes de Aceitação BDD (Cucumber):** Suíte automatizada com 31 cenários executados com 100% de sucesso cobrindo ciclo de vida de carteiras, ativos, mercado, analytics, isolamento multi-tenancy, gráficos, watchlist, CSV e transferências
 
 ---
 

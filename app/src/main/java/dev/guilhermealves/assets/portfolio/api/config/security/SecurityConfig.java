@@ -61,6 +61,7 @@ public class SecurityConfig {
                                 "/wallets/**",
                                 "/transactions/**",
                                 "/portfolio/**",
+                                "/watchlist/**",
                                 "/users/me",
                                 "/users/**"
                         ).authenticated()
