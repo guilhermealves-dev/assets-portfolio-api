@@ -66,9 +66,9 @@ public class MarketDataStepDefinitions {
     public void validarProvedorReconhecido() {
         assertNotNull(lastPriceResponse);
         assertNotNull(lastPriceResponse.getSource());
-        Set<String> exchangesReconhecidas = Set.of("BINANCE", "COINBASE", "BYBIT");
+        Set<String> exchangesReconhecidas = Set.of("BINANCE", "BINANCE_US", "COINBASE", "BYBIT", "KUCOIN", "KRAKEN");
         assertTrue(exchangesReconhecidas.contains(lastPriceResponse.getSource()),
-                "Provedor deve ser uma exchange reconhecida (Binance, Coinbase ou Bybit). Recebido: " + lastPriceResponse.getSource());
+                "Provedor deve ser uma exchange reconhecida (Binance, Coinbase, Bybit, KuCoin ou Kraken). Recebido: " + lastPriceResponse.getSource());
     }
 
     @Quando("eu consulto a taxa de câmbio de {string} para {string}")

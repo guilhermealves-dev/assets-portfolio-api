@@ -256,8 +256,8 @@ public class MarketDataService {
             log.warn("Erro ao buscar ativos locais: {}", e.getMessage());
         }
 
-        // 2. Busca prioritária no catálogo de Criptomoedas conhecidas (Binance / CoinCap)
-        List<String> popularCryptos = List.of("BTC", "ETH", "SOL", "BNB", "ADA", "DOGE", "XRP", "DOT", "AVAX", "LINK", "PAXG", "USDT", "USDC", "NEAR", "SUI", "RENDER", "AAVE");
+        // 2. Busca prioritária no catálogo de Criptomoedas conhecidas (Binance / KuCoin / Kraken)
+        List<String> popularCryptos = List.of("BTC", "ETH", "SOL", "BNB", "ADA", "DOGE", "XRP", "DOT", "AVAX", "LINK", "XMR", "PAXG", "USDT", "USDC", "NEAR", "SUI", "RENDER", "AAVE");
         for (String pop : popularCryptos) {
             if (pop.equalsIgnoreCase(q) || pop.contains(q)) {
                 if (results.stream().noneMatch(r -> r.getSymbol().equalsIgnoreCase(pop))) {
@@ -343,6 +343,7 @@ public class MarketDataService {
             case "DOT": return "Polkadot";
             case "AVAX": return "Avalanche";
             case "LINK": return "Chainlink";
+            case "XMR": return "Monero";
             case "PAXG": return "PAX Gold";
             case "USDT": return "Tether USD";
             case "USDC": return "USD Coin";

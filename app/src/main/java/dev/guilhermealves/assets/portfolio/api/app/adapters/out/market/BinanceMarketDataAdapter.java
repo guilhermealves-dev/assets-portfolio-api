@@ -66,6 +66,15 @@ public class BinanceMarketDataAdapter implements MarketPriceProviderPort {
                     .body(JsonNode.class);
 
             if (response != null && response.has("lastPrice")) {
+                BigDecimal bidPrice = response.has("bidPrice") ? new BigDecimal(response.get("bidPrice").asText()) : BigDecimal.ZERO;
+                BigDecimal askPrice = response.has("askPrice") ? new BigDecimal(response.get("askPrice").asText()) : BigDecimal.ZERO;
+
+                // Se bidPrice e askPrice forem ambos zero, o par não possui ofertas ativas ou foi deslistado da Binance (ex: Monero XMR)
+                if (bidPrice.compareTo(BigDecimal.ZERO) == 0 && askPrice.compareTo(BigDecimal.ZERO) == 0) {
+                    log.warn("Par {} na Binance possui order book zerado (ativo deslistado/inativo). Acionando provedores alternativos...", pair);
+                    return tryFetchFromBinanceUs(base);
+                }
+
                 return Optional.of(buildResponse(base, response, "BINANCE"));
             }
         } catch (HttpClientErrorException e) {
@@ -96,6 +105,14 @@ public class BinanceMarketDataAdapter implements MarketPriceProviderPort {
                         .body(JsonNode.class);
 
                 if (response != null && response.has("lastPrice")) {
+                    BigDecimal bidPrice = response.has("bidPrice") ? new BigDecimal(response.get("bidPrice").asText()) : BigDecimal.ZERO;
+                    BigDecimal askPrice = response.has("askPrice") ? new BigDecimal(response.get("askPrice").asText()) : BigDecimal.ZERO;
+
+                    if (bidPrice.compareTo(BigDecimal.ZERO) == 0 && askPrice.compareTo(BigDecimal.ZERO) == 0) {
+                        log.warn("Par {} na Binance US possui order book zerado (deslistado). Continuando...", pair);
+                        continue;
+                    }
+
                     log.debug("Cotação obtida via Binance US para o par {}", pair);
                     return Optional.of(buildResponse(base, response, "BINANCE_US"));
                 }
