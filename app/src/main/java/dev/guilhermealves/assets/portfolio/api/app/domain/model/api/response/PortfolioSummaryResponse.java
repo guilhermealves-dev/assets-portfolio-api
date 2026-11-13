@@ -46,6 +46,12 @@ public class PortfolioSummaryResponse {
     @Schema(description = "Distribuição percentual global por classe de ativo")
     private Map<AssetType, BigDecimal> allocationByType;
 
+    @Schema(description = "Ativo com melhor performance percentual geral do portfólio")
+    private AssetPerformanceResponse bestPerformer;
+
+    @Schema(description = "Ativo com pior performance percentual geral do portfólio")
+    private AssetPerformanceResponse worstPerformer;
+
     @Schema(description = "Resumo detalhado de cada carteira")
     private List<WalletSummaryResponse> wallets;
 

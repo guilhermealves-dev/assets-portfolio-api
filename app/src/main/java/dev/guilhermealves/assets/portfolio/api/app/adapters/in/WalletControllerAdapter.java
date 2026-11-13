@@ -4,6 +4,7 @@ import dev.guilhermealves.assets.portfolio.api.app.domain.core.PortfolioAnalytic
 import dev.guilhermealves.assets.portfolio.api.app.domain.core.WalletCore;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.request.WalletRequest;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.HoldingResponse;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.PortfolioChartResponse;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletResponse;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletSummaryResponse;
 import dev.guilhermealves.assets.portfolio.api.app.exception.ResourceNotFoundException;
@@ -89,6 +90,24 @@ public class WalletControllerAdapter implements ControllerIntegration<WalletRequ
             @RequestParam(required = false, defaultValue = "USD") String currency) {
         try {
             return ResponseEntity.ok(analyticsCore.calculateWalletHoldings(id, null, currency));
+        } catch (ResourceNotFoundException | AccessDeniedException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @GetMapping("/{id}/chart")
+    @Operation(summary = "Gráfico e série histórica da carteira",
+            description = "Retorna a série temporal de pontos (timestamp, saldo, investido, lucro) da carteira para os períodos 24H, 7D, 30D, 90D, 1Y ou ALL")
+    @ApiResponse(responseCode = "200", description = "Série histórica da carteira calculada com sucesso")
+    @ApiResponse(responseCode = "404", description = "Carteira não encontrada")
+    public ResponseEntity<PortfolioChartResponse> getChart(
+            @PathVariable String id,
+            @RequestParam(required = false, defaultValue = "30D") String range,
+            @RequestParam(required = false, defaultValue = "USD") String currency) {
+        try {
+            return ResponseEntity.ok(analyticsCore.calculateWalletChart(id, range, currency));
         } catch (ResourceNotFoundException | AccessDeniedException e) {
             throw e;
         } catch (Exception e) {

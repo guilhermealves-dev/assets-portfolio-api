@@ -54,6 +54,12 @@ public class WalletSummaryResponse {
     @Schema(description = "Distribuição percentual por classe de ativo")
     private Map<AssetType, BigDecimal> allocationByType;
 
+    @Schema(description = "Ativo com melhor performance percentual da carteira")
+    private AssetPerformanceResponse bestPerformer;
+
+    @Schema(description = "Ativo com pior performance percentual da carteira")
+    private AssetPerformanceResponse worstPerformer;
+
     @Schema(description = "Moeda dos valores exibidos", example = "USD")
     private String currency;
 }

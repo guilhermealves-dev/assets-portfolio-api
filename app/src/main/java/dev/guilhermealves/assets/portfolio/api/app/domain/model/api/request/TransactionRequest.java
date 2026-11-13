@@ -46,8 +46,8 @@ public class TransactionRequest {
     private String walletId;
 
     @NotNull(message = "O preço unitário é obrigatório")
-    @Positive(message = "O preço deve ser maior que zero")
-    @Schema(description = "Preço unitário no momento da transação", example = "60000.00")
+    @PositiveOrZero(message = "O preço não pode ser negativo")
+    @Schema(description = "Preço unitário no momento da transação (pode ser 0 para proventos/airdrop)", example = "60000.00")
     private BigDecimal price;
 
     @NotNull(message = "O valor total (amount) é obrigatório")
@@ -56,8 +56,8 @@ public class TransactionRequest {
     private BigDecimal amount;
 
     @NotNull(message = "A quantidade é obrigatória")
-    @Positive(message = "A quantidade deve ser maior que zero")
-    @Schema(description = "Quantidade de cotas/moedas negociadas", example = "0.25")
+    @PositiveOrZero(message = "A quantidade não pode ser negativa")
+    @Schema(description = "Quantidade de cotas/moedas negociadas (pode ser 0 para dividendos)", example = "0.25")
     private BigDecimal quantity;
 
     @NotNull(message = "A taxa da operação é obrigatória (pode ser 0)")

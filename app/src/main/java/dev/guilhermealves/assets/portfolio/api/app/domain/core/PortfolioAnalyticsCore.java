@@ -7,10 +7,7 @@ import dev.guilhermealves.assets.portfolio.api.app.domain.entity.AssetDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.TransactionDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.entity.WalletDocument;
 import dev.guilhermealves.assets.portfolio.api.app.domain.mapper.AssetMapper;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.AssetResponse;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.HoldingResponse;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.PortfolioSummaryResponse;
-import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletSummaryResponse;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.*;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.AssetType;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.TransactionType;
 import dev.guilhermealves.assets.portfolio.api.app.exception.ResourceNotFoundException;
@@ -20,6 +17,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -139,6 +139,8 @@ public class PortfolioAnalyticsCore {
                 .totalAssetsCount((int) holdings.stream().filter(h -> h.getQuantity().compareTo(BigDecimal.ZERO) > 0).count())
                 .totalTransactionsCount(transactions.size())
                 .allocationByType(allocationByType)
+                .bestPerformer(extractBestPerformer(holdings))
+                .worstPerformer(extractWorstPerformer(holdings))
                 .build();
     }
 
@@ -218,6 +220,8 @@ public class PortfolioAnalyticsCore {
                 .totalWalletsCount(userWallets.size())
                 .totalAssetsCount((int) consolidatedHoldings.stream().filter(h -> h.getQuantity().compareTo(BigDecimal.ZERO) > 0).count())
                 .allocationByType(allocationByType)
+                .bestPerformer(extractBestPerformer(consolidatedHoldings))
+                .worstPerformer(extractWorstPerformer(consolidatedHoldings))
                 .wallets(walletSummaries)
                 .build();
     }
@@ -345,13 +349,18 @@ public class PortfolioAnalyticsCore {
                     case REWARD:
                     case STAKING:
                     case AIRDROP:
-                    case DIVIDEND:
-                        // Rendimento passivo: custo base zero, apenas taxa adicionada se houver
+                        // Rendimento passivo em cotas/tokens: custo base zero, apenas taxa adicionada se houver
                         currentQuantity = currentQuantity.add(qty);
                         currentInvested = currentInvested.add(fee);
                         if (currentQuantity.compareTo(BigDecimal.ZERO) > 0) {
                             avgBuyPrice = currentInvested.divide(currentQuantity, 8, RoundingMode.HALF_UP);
                         }
+                        break;
+
+                    case DIVIDEND:
+                        // Provento financeiro em dinheiro: incrementa diretamente o lucro realizado da posição
+                        BigDecimal netDividend = amount.subtract(fee);
+                        realizedPnL = realizedPnL.add(netDividend);
                         break;
 
                     case SELL:
@@ -476,6 +485,199 @@ public class PortfolioAnalyticsCore {
             return true;
         }
         return false;
+    }
+
+    // =========================================================================
+    // MÉTODOS DE HISTÓRICO E GRÁFICOS (PORTFOLIO & WALLET CHARTS)
+    // =========================================================================
+
+    public PortfolioChartResponse calculateWalletChart(String walletId, String range, String currency) throws Exception {
+        WalletDocument wallet = walletFireBaseAdapter.findById(walletId)
+                .orElseThrow(() -> new ResourceNotFoundException("Carteira", walletId));
+        walletCore.validateWalletOwnership(wallet);
+
+        List<TransactionDocument> transactions = transactionFireBaseAdapter.findByWalletId(walletId);
+        if (transactions.isEmpty()) {
+            transactions = transactionFireBaseAdapter.findAll().stream()
+                    .filter(tx -> isTransactionOfWallet(tx, walletId))
+                    .collect(Collectors.toList());
+        }
+
+        return generateChartResponse(transactions, range, currency);
+    }
+
+    public PortfolioChartResponse calculatePortfolioChart(String userId, String range, String currency) throws Exception {
+        String targetUserId = (userId != null && !userId.isBlank()) ? userId : securityCore.getCurrentUserId();
+        if (!targetUserId.equals(securityCore.getCurrentUserId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Acesso negado: você só pode consultar o gráfico do seu próprio portfólio");
+        }
+
+        List<WalletDocument> allWallets = walletFireBaseAdapter.findAll();
+        List<WalletDocument> userWallets = allWallets.stream()
+                .filter(w -> isWalletOfUser(w, targetUserId))
+                .collect(Collectors.toList());
+
+        Set<String> walletIds = userWallets.stream().map(WalletDocument::getId).collect(Collectors.toSet());
+
+        List<TransactionDocument> allTransactions = transactionFireBaseAdapter.findAll().stream()
+                .filter(tx -> {
+                    String wId = tx.getWalletId() != null ? tx.getWalletId() :
+                            (tx.getWallet() != null ? tx.getWallet().getId() : null);
+                    return wId != null && walletIds.contains(wId);
+                })
+                .collect(Collectors.toList());
+
+        return generateChartResponse(allTransactions, range, currency);
+    }
+
+    private PortfolioChartResponse generateChartResponse(List<TransactionDocument> transactions, String rangeParam, String currency) throws Exception {
+        String range = (rangeParam != null && !rangeParam.isBlank()) ? rangeParam.trim().toUpperCase() : "30D";
+        String targetCurrency = (currency != null && !currency.isBlank()) ? currency.toUpperCase() : "USD";
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startDate;
+        int pointCount;
+
+        switch (range) {
+            case "24H":
+                startDate = now.minusHours(24);
+                pointCount = 24;
+                break;
+            case "7D":
+                startDate = now.minusDays(7);
+                pointCount = 14;
+                break;
+            case "90D":
+                startDate = now.minusDays(90);
+                pointCount = 30;
+                break;
+            case "1Y":
+                startDate = now.minusYears(1);
+                pointCount = 52;
+                break;
+            case "ALL":
+                Date earliest = transactions.stream()
+                        .map(tx -> tx.getDatetime() != null ? tx.getDatetime().toDate() : null)
+                        .filter(Objects::nonNull)
+                        .min(Date::compareTo)
+                        .orElse(null);
+                if (earliest != null) {
+                    startDate = earliest.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+                } else {
+                    startDate = now.minusDays(30);
+                }
+                pointCount = 30;
+                break;
+            case "30D":
+            default:
+                range = "30D";
+                startDate = now.minusDays(30);
+                pointCount = 30;
+                break;
+        }
+
+        if (startDate.isAfter(now)) {
+            startDate = now.minusDays(1);
+        }
+
+        // Cache de cotações atuais de mercado
+        Map<String, BigDecimal> currentPrices = new HashMap<>();
+        List<AssetDocument> allAssets = assetFireBaseAdapter.findAll();
+        for (AssetDocument a : allAssets) {
+            if (a.getSymbol() != null) {
+                AssetType at = AssetType.fromString(a.getType());
+                marketDataService.getMarketPrice(a.getSymbol(), at, targetCurrency)
+                        .ifPresent(p -> currentPrices.put(a.getId(), p.getPrice()));
+            }
+        }
+
+        List<ChartDataPointResponse> points = new ArrayList<>();
+        long totalSeconds = Duration.between(startDate, now).getSeconds();
+        if (totalSeconds <= 0) totalSeconds = 86400;
+        long stepSeconds = Math.max(1, totalSeconds / Math.max(1, pointCount));
+
+        for (int i = 0; i <= pointCount; i++) {
+            LocalDateTime pointTime = (i == pointCount) ? now : startDate.plusSeconds(i * stepSeconds);
+            Date cutOff = Date.from(pointTime.atZone(ZoneId.systemDefault()).toInstant());
+
+            List<TransactionDocument> txUpToPoint = transactions.stream()
+                    .filter(tx -> tx.getDatetime() != null && !tx.getDatetime().toDate().after(cutOff))
+                    .collect(Collectors.toList());
+
+            List<HoldingResponse> holdingsAtPoint = computeHoldingsFromTransactions(txUpToPoint, currentPrices, targetCurrency);
+
+            BigDecimal balanceAtPoint = holdingsAtPoint.stream()
+                    .map(HoldingResponse::getTotalValue)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal investedAtPoint = holdingsAtPoint.stream()
+                    .map(HoldingResponse::getTotalInvested)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal pnlAtPoint = balanceAtPoint.subtract(investedAtPoint);
+
+            points.add(ChartDataPointResponse.builder()
+                    .timestamp(pointTime)
+                    .balance(balanceAtPoint.setScale(2, RoundingMode.HALF_UP))
+                    .invested(investedAtPoint.setScale(2, RoundingMode.HALF_UP))
+                    .profitLoss(pnlAtPoint.setScale(2, RoundingMode.HALF_UP))
+                    .build());
+        }
+
+        ChartDataPointResponse firstPoint = points.get(0);
+        ChartDataPointResponse lastPoint = points.get(points.size() - 1);
+
+        BigDecimal changeAmount = lastPoint.getBalance().subtract(firstPoint.getBalance()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal changePercentage = BigDecimal.ZERO;
+        if (firstPoint.getBalance().compareTo(BigDecimal.ZERO) > 0) {
+            changePercentage = changeAmount.multiply(BigDecimal.valueOf(100))
+                    .divide(firstPoint.getBalance(), 2, RoundingMode.HALF_UP);
+        } else if (lastPoint.getBalance().compareTo(BigDecimal.ZERO) > 0) {
+            changePercentage = BigDecimal.valueOf(100.00);
+        }
+
+        return PortfolioChartResponse.builder()
+                .range(range)
+                .currency(targetCurrency)
+                .currentBalance(lastPoint.getBalance())
+                .totalInvested(lastPoint.getInvested())
+                .changeAmount(changeAmount)
+                .changePercentage(changePercentage)
+                .points(points)
+                .build();
+    }
+
+    private AssetPerformanceResponse extractBestPerformer(List<HoldingResponse> holdings) {
+        if (holdings == null) return null;
+        return holdings.stream()
+                .filter(h -> h.getQuantity().compareTo(BigDecimal.ZERO) > 0 && h.getTotalInvested().compareTo(BigDecimal.ZERO) > 0)
+                .max(Comparator.comparing(HoldingResponse::getUnrealizedProfitLossPercentage))
+                .map(this::toPerformanceResponse)
+                .orElse(null);
+    }
+
+    private AssetPerformanceResponse extractWorstPerformer(List<HoldingResponse> holdings) {
+        if (holdings == null) return null;
+        return holdings.stream()
+                .filter(h -> h.getQuantity().compareTo(BigDecimal.ZERO) > 0 && h.getTotalInvested().compareTo(BigDecimal.ZERO) > 0)
+                .min(Comparator.comparing(HoldingResponse::getUnrealizedProfitLossPercentage))
+                .map(this::toPerformanceResponse)
+                .orElse(null);
+    }
+
+    private AssetPerformanceResponse toPerformanceResponse(HoldingResponse h) {
+        return AssetPerformanceResponse.builder()
+                .assetId(h.getAsset() != null ? h.getAsset().getId() : null)
+                .symbol(h.getAsset() != null ? h.getAsset().getSymbol() : null)
+                .name(h.getAsset() != null ? h.getAsset().getName() : null)
+                .type(h.getAsset() != null ? h.getAsset().getType() : null)
+                .imgUrl(h.getAsset() != null ? h.getAsset().getImgUrl() : null)
+                .unrealizedProfitLoss(h.getUnrealizedProfitLoss())
+                .unrealizedProfitLossPercentage(h.getUnrealizedProfitLossPercentage())
+                .currentPrice(h.getCurrentPrice())
+                .build();
     }
 
     private boolean isCredit(String typeStr) {

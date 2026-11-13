@@ -2,6 +2,7 @@ package dev.guilhermealves.assets.portfolio.api.app.adapters.in;
 
 import dev.guilhermealves.assets.portfolio.api.app.domain.core.PortfolioAnalyticsCore;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.HoldingResponse;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.PortfolioChartResponse;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.PortfolioSummaryResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -56,6 +57,23 @@ public class PortfolioControllerAdapter {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException("Erro ao calcular holdings do portfólio: " + e.getMessage(), e);
+        }
+    }
+
+    @GetMapping("/chart")
+    @Operation(summary = "Gráfico e série histórica do portfólio consolidado",
+            description = "Retorna a série temporal de pontos (timestamp, saldo, investido, lucro) somando todas as carteiras do usuário para os períodos 24H, 7D, 30D, 90D, 1Y ou ALL")
+    @ApiResponse(responseCode = "200", description = "Série histórica do portfólio calculada com sucesso")
+    public ResponseEntity<PortfolioChartResponse> getPortfolioChart(
+            @Parameter(description = "ID do usuário para filtrar (opcional)") @RequestParam(required = false) String userId,
+            @Parameter(description = "Janela temporal (24H, 7D, 30D, 90D, 1Y, ALL)") @RequestParam(required = false, defaultValue = "30D") String range,
+            @Parameter(description = "Moeda de exibição (USD ou BRL, padrão: USD)") @RequestParam(required = false, defaultValue = "USD") String currency) {
+        try {
+            return ResponseEntity.ok(analyticsCore.calculatePortfolioChart(userId, range, currency));
+        } catch (AccessDeniedException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao calcular gráfico do portfólio: " + e.getMessage(), e);
         }
     }
 }
