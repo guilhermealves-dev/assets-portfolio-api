@@ -36,7 +36,6 @@ public class TransactionAutoAssetStepDefinitions {
     private String userId;
     private String walletId;
     private final List<String> createdTxIds = new ArrayList<>();
-    private final Set<String> createdAssetIds = new HashSet<>();
     private String firstTxAssetId;
     private String secondTxAssetId;
     private MvcResult lastResult;
@@ -109,9 +108,7 @@ public class TransactionAutoAssetStepDefinitions {
             String txId = lastJson.get("id").asText();
             createdTxIds.add(txId);
             if (lastJson.has("asset") && lastJson.get("asset").has("id")) {
-                String aId = lastJson.get("asset").get("id").asText();
-                createdAssetIds.add(aId);
-                firstTxAssetId = aId;
+                firstTxAssetId = lastJson.get("asset").get("id").asText();
             }
         }
     }
@@ -146,7 +143,6 @@ public class TransactionAutoAssetStepDefinitions {
             createdTxIds.add(txId);
             if (lastJson.has("asset") && lastJson.get("asset").has("id")) {
                 secondTxAssetId = lastJson.get("asset").get("id").asText();
-                createdAssetIds.add(secondTxAssetId);
             }
         }
     }
@@ -173,9 +169,6 @@ public class TransactionAutoAssetStepDefinitions {
             lastJson = objectMapper.readTree(lastResult.getResponse().getContentAsString());
             String txId = lastJson.get("id").asText();
             createdTxIds.add(txId);
-            if (lastJson.has("asset") && lastJson.get("asset").has("id")) {
-                createdAssetIds.add(lastJson.get("asset").get("id").asText());
-            }
         }
     }
 
@@ -253,9 +246,6 @@ public class TransactionAutoAssetStepDefinitions {
             }
             if (walletId != null) {
                 mockMvc.perform(delete("/wallets/{id}", walletId).header("Authorization", getAuthHeader()));
-            }
-            for (String assetId : createdAssetIds) {
-                mockMvc.perform(delete("/assets/{id}", assetId).header("Authorization", getAuthHeader()));
             }
             if (userId != null) {
                 mockMvc.perform(delete("/users/{id}", userId).header("Authorization", getAuthHeader()));

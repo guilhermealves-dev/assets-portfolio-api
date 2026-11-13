@@ -44,7 +44,6 @@ public class Fase6StepDefinitions {
     private String userBWalletId;
 
     private final List<String> createdTxIds = new ArrayList<>();
-    private final Set<String> createdAssetIds = new HashSet<>();
     private final List<String> createdWalletIds = new ArrayList<>();
     private final List<String> createdUserIds = new ArrayList<>();
     private final Set<String> watchlistAddedSymbols = new HashSet<>();
@@ -242,9 +241,6 @@ public class Fase6StepDefinitions {
 
         JsonNode node = objectMapper.readTree(res.getResponse().getContentAsString());
         createdTxIds.add(node.get("id").asText());
-        if (node.has("asset") && node.get("asset").has("id")) {
-            createdAssetIds.add(node.get("asset").get("id").asText());
-        }
     }
 
     @Quando("eu solicito a exportação de transações em formato CSV")
@@ -480,13 +476,6 @@ public class Fase6StepDefinitions {
                 }
                 try {
                     mockMvc.perform(delete("/wallets/{id}", wId).header("Authorization", getUserBAuthHeader()));
-                } catch (Exception ignored) {
-                }
-            }
-            // Limpa ativos
-            for (String assetId : createdAssetIds) {
-                try {
-                    mockMvc.perform(delete("/assets/{id}", assetId).header("Authorization", getAuthHeader()));
                 } catch (Exception ignored) {
                 }
             }

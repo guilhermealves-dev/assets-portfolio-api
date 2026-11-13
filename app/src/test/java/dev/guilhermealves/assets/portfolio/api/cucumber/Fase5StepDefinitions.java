@@ -38,7 +38,6 @@ public class Fase5StepDefinitions {
     private String userId;
     private String walletId;
     private final List<String> createdTxIds = new ArrayList<>();
-    private final Set<String> createdAssetIds = new HashSet<>();
     private MvcResult lastResult;
     private WalletSummaryResponse lastWalletSummary;
     private PortfolioChartResponse lastChartResponse;
@@ -109,9 +108,6 @@ public class Fase5StepDefinitions {
 
         JsonNode json = objectMapper.readTree(result.getResponse().getContentAsString());
         createdTxIds.add(json.get("id").asText());
-        if (json.has("asset") && json.get("asset").has("id")) {
-            createdAssetIds.add(json.get("asset").get("id").asText());
-        }
     }
 
     @Quando("eu consulto o resumo da carteira na moeda {string}")
@@ -162,9 +158,6 @@ public class Fase5StepDefinitions {
         if (lastResult.getResponse().getStatus() == 201) {
             JsonNode json = objectMapper.readTree(lastResult.getResponse().getContentAsString());
             createdTxIds.add(json.get("id").asText());
-            if (json.has("asset") && json.get("asset").has("id")) {
-                createdAssetIds.add(json.get("asset").get("id").asText());
-            }
         }
     }
 
@@ -245,9 +238,6 @@ public class Fase5StepDefinitions {
             }
             if (walletId != null) {
                 mockMvc.perform(delete("/wallets/{id}", walletId).header("Authorization", getAuthHeader()));
-            }
-            for (String assetId : createdAssetIds) {
-                mockMvc.perform(delete("/assets/{id}", assetId).header("Authorization", getAuthHeader()));
             }
             if (userId != null) {
                 mockMvc.perform(delete("/users/{id}", userId).header("Authorization", getAuthHeader()));
