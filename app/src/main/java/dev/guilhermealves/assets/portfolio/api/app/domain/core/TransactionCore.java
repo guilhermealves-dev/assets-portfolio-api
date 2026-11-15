@@ -89,9 +89,13 @@ public class TransactionCore {
         }
 
         String aId = existingTx.getAssetId();
-        if (transaction.getEffectiveAssetIdentifier() != null) {
+        String assetIdentifier = transaction.getEffectiveAssetIdentifier() != null
+                ? transaction.getEffectiveAssetIdentifier()
+                : aId;
+
+        if (assetIdentifier != null) {
             AssetDocument assetDoc = assetCore.findOrCreateAsset(
-                    transaction.getEffectiveAssetIdentifier(),
+                    assetIdentifier,
                     transaction.getAssetType(),
                     transaction.getAssetName()
             );

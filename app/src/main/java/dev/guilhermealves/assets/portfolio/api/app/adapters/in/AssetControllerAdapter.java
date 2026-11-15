@@ -69,7 +69,7 @@ public class AssetControllerAdapter implements ControllerIntegration<AssetReques
     }
 
     @Override
-    @PatchMapping("/{id}")
+    @RequestMapping(value = "/{id}", method = {RequestMethod.PATCH, RequestMethod.PUT})
     @Operation(summary = "Atualizar ativo", description = "Atualiza os dados de um ativo existente")
     @ApiResponse(responseCode = "200", description = "Ativo atualizado com sucesso")
     @ApiResponse(responseCode = "404", description = "Ativo não encontrado")

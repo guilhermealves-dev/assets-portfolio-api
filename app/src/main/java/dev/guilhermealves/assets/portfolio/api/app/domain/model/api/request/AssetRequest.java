@@ -30,7 +30,6 @@ public class AssetRequest {
     @Schema(description = "Tipo do ativo", example = "CRYPTO")
     private AssetType type;
 
-    @NotBlank(message = "A URL da imagem é obrigatória")
     @Schema(description = "URL do logotipo ou ícone do ativo", example = "https://assets.coingecko.com/coins/images/1/large/bitcoin.png")
     private String imgUrl;
 }

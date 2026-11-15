@@ -36,8 +36,27 @@ public class AssetCore {
     }
 
     public AssetResponse update(AssetRequest asset) throws Exception {
-        assetFireBaseAdapter.findById(asset.getId())
+        AssetDocument existing = assetFireBaseAdapter.findById(asset.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Ativo", asset.getId()));
+
+        if (asset.getSymbol() == null || asset.getSymbol().isBlank()) {
+            asset.setSymbol(existing.getSymbol());
+        }
+        if (asset.getName() == null || asset.getName().isBlank()) {
+            asset.setName(existing.getName());
+        }
+        if (asset.getType() == null && existing.getType() != null) {
+            asset.setType(AssetType.valueOf(existing.getType()));
+        }
+        if (asset.getImgUrl() == null || asset.getImgUrl().isBlank()) {
+            asset.setImgUrl(existing.getImgUrl());
+        }
+        if (asset.getType() != null) {
+            String newLogo = assetIconResolver.resolveIconUrl(asset.getSymbol(), asset.getType());
+            if (newLogo != null) {
+                asset.setImgUrl(newLogo);
+            }
+        }
 
         AssetDocument docRequest = assetMapper.map(asset);
         AssetDocument doc = assetFireBaseAdapter.update(docRequest);
@@ -80,25 +99,46 @@ public class AssetCore {
 
         String trimmed = identifier.trim();
 
+        // Auto-detecção inteligente de mercado caso não informado ou classificado genericamente
+        AssetType effectiveHintType = hintType;
+        if (effectiveHintType == null || effectiveHintType == AssetType.OTHER) {
+            String upper = trimmed.toUpperCase();
+            if (upper.matches("^[A-Z]{4}11[B|F]?$")) {
+                effectiveHintType = AssetType.FII;
+            } else if (upper.matches("^[A-Z]{4}[345678][F]?$")) {
+                effectiveHintType = AssetType.STOCK_BR;
+            }
+        }
+
         // 1. Tenta buscar pelo ID direto no Firestore
         Optional<AssetDocument> byIdOpt = assetFireBaseAdapter.findById(trimmed);
         if (byIdOpt.isPresent()) {
-            return byIdOpt.get();
-        }
-
-        // 2. Tenta buscar pelo símbolo no Firestore (ex: NVDA, BTC, PETR4)
-        Optional<AssetDocument> bySymbolOpt = assetFireBaseAdapter.findBySymbol(trimmed);
-        if (bySymbolOpt.isPresent()) {
-            AssetDocument existing = bySymbolOpt.get();
-            // Se o usuário especificou explicitamente um tipo diferente do cadastrado (ex: foi criado como ETF mas é CRYPTO), corrige
-            if (hintType != null && !hintType.name().equalsIgnoreCase(existing.getType())) {
-                existing.setType(hintType.name());
-                String correctLogo = assetIconResolver.resolveIconUrl(existing.getSymbol(), hintType);
+            AssetDocument existing = byIdOpt.get();
+            if (effectiveHintType != null && !effectiveHintType.name().equalsIgnoreCase(existing.getType())) {
+                existing.setType(effectiveHintType.name());
+                String correctLogo = assetIconResolver.resolveIconUrl(existing.getSymbol(), effectiveHintType);
                 if (correctLogo != null) {
                     existing.setImgUrl(correctLogo);
                 }
                 assetFireBaseAdapter.update(existing);
-                log.info("Corrigido tipo do ativo '{}' de {} para {}", existing.getSymbol(), existing.getType(), hintType);
+                log.info("Corrigido tipo do ativo '{}' (ID {}) de {} para {}", existing.getSymbol(), existing.getId(), existing.getType(), effectiveHintType);
+            }
+            return existing;
+        }
+
+        // 2. Tenta buscar pelo símbolo no Firestore (ex: NVDA, BTC, PETR4, MXRF11)
+        Optional<AssetDocument> bySymbolOpt = assetFireBaseAdapter.findBySymbol(trimmed);
+        if (bySymbolOpt.isPresent()) {
+            AssetDocument existing = bySymbolOpt.get();
+            // Se o usuário especificou explicitamente um tipo diferente do cadastrado (ex: foi criado como CRYPTO mas é FII), corrige
+            if (effectiveHintType != null && !effectiveHintType.name().equalsIgnoreCase(existing.getType())) {
+                existing.setType(effectiveHintType.name());
+                String correctLogo = assetIconResolver.resolveIconUrl(existing.getSymbol(), effectiveHintType);
+                if (correctLogo != null) {
+                    existing.setImgUrl(correctLogo);
+                }
+                assetFireBaseAdapter.update(existing);
+                log.info("Corrigido tipo do ativo '{}' de {} para {}", existing.getSymbol(), existing.getType(), effectiveHintType);
             }
             return existing;
         }
@@ -106,22 +146,22 @@ public class AssetCore {
         // 3. O ativo não existe no Firestore: buscar metadados de mercado e auto-provisionar
         String symbol = trimmed.toUpperCase();
         String name = (hintName != null && !hintName.isBlank()) ? hintName : symbol;
-        AssetType type = hintType != null ? hintType : AssetType.OTHER;
+        AssetType type = effectiveHintType != null ? effectiveHintType : AssetType.OTHER;
         String imgUrl = null;
 
-        // Se o tipo foi explicitamente fornecido (ex: CRYPTO), busca cotação diretamente com esse tipo para evitar conflitos
-        if (hintType != null && hintType != AssetType.OTHER) {
+        // Se o tipo foi explicitamente fornecido (ex: CRYPTO ou FII), busca cotação diretamente com esse tipo para evitar conflitos
+        if (effectiveHintType != null && effectiveHintType != AssetType.OTHER) {
             try {
-                Optional<MarketPriceResponse> priceOpt = marketDataService.getMarketPrice(symbol, hintType, "USD");
+                Optional<MarketPriceResponse> priceOpt = marketDataService.getMarketPrice(symbol, effectiveHintType, "USD");
                 if (priceOpt.isPresent()) {
                     MarketPriceResponse pr = priceOpt.get();
                     if (pr.getName() != null && !pr.getName().isBlank() && (hintName == null || hintName.isBlank())) {
                         name = pr.getName();
                     }
-                    type = hintType;
+                    type = effectiveHintType;
                 }
             } catch (Exception e) {
-                log.warn("Erro ao buscar cotação direta para {} com tipo {}: {}", symbol, hintType, e.getMessage());
+                log.warn("Erro ao buscar cotação direta para {} com tipo {}: {}", symbol, effectiveHintType, e.getMessage());
             }
         } else {
             // 3.1. Tenta resolver via MarketDataService.searchAssets

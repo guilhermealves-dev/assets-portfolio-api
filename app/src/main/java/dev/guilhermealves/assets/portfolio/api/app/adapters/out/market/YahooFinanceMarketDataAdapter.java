@@ -48,9 +48,28 @@ public class YahooFinanceMarketDataAdapter implements MarketPriceProviderPort {
 
         String ticker = symbol.trim().toUpperCase();
 
+        // 1. Tenta buscar direto pelo ticker
+        // Se for padrão de ativo brasileiro da B3 (termina com dígito ou FII) e não tem ponto, tenta com sufixo .SA primeiro
+        boolean isB3Pattern = ticker.matches("^[A-Z]{4}[0-9]{1,2}[A-Z]?$");
+
+        Optional<MarketPriceResponse> res = Optional.empty();
+        if (isB3Pattern && !ticker.contains(".")) {
+            res = fetchFromYahoo(ticker + ".SA", ticker);
+        }
+        if (res.isEmpty()) {
+            res = fetchFromYahoo(ticker, ticker);
+        }
+        if (res.isEmpty() && !ticker.contains(".") && !isB3Pattern) {
+            res = fetchFromYahoo(ticker + ".SA", ticker);
+        }
+
+        return res;
+    }
+
+    private Optional<MarketPriceResponse> fetchFromYahoo(String queryTicker, String originalSymbol) {
         try {
             JsonNode response = restClient.get()
-                    .uri("/v8/finance/chart/{ticker}", ticker)
+                    .uri("/v8/finance/chart/{ticker}", queryTicker)
                     .retrieve()
                     .body(JsonNode.class);
 
@@ -59,33 +78,49 @@ public class YahooFinanceMarketDataAdapter implements MarketPriceProviderPort {
                 if (results.isArray() && !results.isEmpty()) {
                     JsonNode meta = results.get(0).get("meta");
                     if (meta != null && meta.has("regularMarketPrice") && !meta.get("regularMarketPrice").isNull()) {
-                        BigDecimal priceUsd = new BigDecimal(meta.get("regularMarketPrice").asText());
+                        BigDecimal price = new BigDecimal(meta.get("regularMarketPrice").asText());
                         BigDecimal change = meta.has("regularMarketChangePercent") && !meta.get("regularMarketChangePercent").isNull()
                                 ? new BigDecimal(meta.get("regularMarketChangePercent").asText()).setScale(2, RoundingMode.HALF_UP)
                                 : BigDecimal.ZERO;
                         String name = meta.has("longName") && !meta.get("longName").isNull()
                                 ? meta.get("longName").asText()
-                                : ticker;
+                                : (meta.has("shortName") && !meta.get("shortName").isNull() ? meta.get("shortName").asText() : originalSymbol);
 
-                        MarketPriceResponse priceResponse = MarketPriceResponse.builder()
-                                .symbol(ticker)
+                        String currency = meta.has("currency") && !meta.get("currency").isNull()
+                                ? meta.get("currency").asText().toUpperCase()
+                                : "USD";
+
+                        AssetType determinedType = AssetType.STOCK_US;
+                        if ("BRL".equalsIgnoreCase(currency) || queryTicker.endsWith(".SA")) {
+                            determinedType = originalSymbol.matches("^[A-Z]{4}11[B|F]?$") ? AssetType.FII : AssetType.STOCK_BR;
+                        } else if (meta.has("quoteType") && "ETF".equalsIgnoreCase(meta.get("quoteType").asText())) {
+                            determinedType = AssetType.ETF;
+                        }
+
+                        MarketPriceResponse.MarketPriceResponseBuilder builder = MarketPriceResponse.builder()
+                                .symbol(originalSymbol)
                                 .name(name)
-                                .type(AssetType.STOCK_US)
-                                .price(priceUsd.setScale(2, RoundingMode.HALF_UP))
-                                .priceInUsd(priceUsd.setScale(2, RoundingMode.HALF_UP))
+                                .type(determinedType)
+                                .price(price.setScale(2, RoundingMode.HALF_UP))
                                 .change24hPercent(change)
-                                .currency("USD")
+                                .currency(currency)
                                 .source(getProviderName())
-                                .updatedAt(LocalDateTime.now())
-                                .build();
+                                .updatedAt(LocalDateTime.now());
 
-                        log.debug("Yahoo Finance price for {}: USD {}", ticker, priceUsd);
+                        if ("BRL".equalsIgnoreCase(currency)) {
+                            builder.priceInBrl(price.setScale(2, RoundingMode.HALF_UP));
+                        } else {
+                            builder.priceInUsd(price.setScale(2, RoundingMode.HALF_UP));
+                        }
+
+                        MarketPriceResponse priceResponse = builder.build();
+                        log.debug("Yahoo Finance price for {}: {} {}", originalSymbol, currency, price);
                         return Optional.of(priceResponse);
                     }
                 }
             }
         } catch (Exception e) {
-            log.warn("Yahoo Finance API error for ticker {}: {}", ticker, e.getMessage());
+            log.warn("Yahoo Finance API error for ticker {}: {}", queryTicker, e.getMessage());
         }
 
         return Optional.empty();
@@ -138,7 +173,7 @@ public class YahooFinanceMarketDataAdapter implements MarketPriceProviderPort {
 
     @Override
     public boolean supports(AssetType type) {
-        return type == AssetType.STOCK_US || type == AssetType.ETF;
+        return type == AssetType.STOCK_US || type == AssetType.ETF || type == AssetType.STOCK_BR || type == AssetType.FII;
     }
 
     @Override
