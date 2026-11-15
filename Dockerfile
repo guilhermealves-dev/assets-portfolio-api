@@ -15,7 +15,7 @@ RUN mvn clean package -DskipTests -B
 # ==========================================
 # Stage 2: Runtime Leve, Otimizado e Seguro
 # ==========================================
-FROM eclipse-temurin:17-jre-alpine
+FROM bellsoft/liberica-runtime-container:jre-17-musl
 WORKDIR /app
 
 # Cria usuário não-root por boas práticas de segurança em contêineres
