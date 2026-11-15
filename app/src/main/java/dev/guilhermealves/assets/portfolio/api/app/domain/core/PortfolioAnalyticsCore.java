@@ -275,6 +275,19 @@ public class PortfolioAnalyticsCore {
             return Collections.emptyList();
         }
 
+        String effectiveTargetCurrency = (targetCurrency != null && !targetCurrency.isBlank()) ? targetCurrency.trim().toUpperCase() : "USD";
+
+        // Obter taxa de câmbio USD/BRL para conversão homogênea do custo de aquisição
+        BigDecimal usdToBrl = BigDecimal.valueOf(5.65);
+        try {
+            var fx = marketDataService.getUsdToBrlRate();
+            if (fx != null && fx.getRate() != null && fx.getRate().compareTo(BigDecimal.ZERO) > 0) {
+                usdToBrl = fx.getRate();
+            }
+        } catch (Exception e) {
+            log.warn("Falha ao obter taxa USD/BRL: {}", e.getMessage());
+        }
+
         // 1. Cache de ativos para evitar N leituras remotas
         Map<String, AssetDocument> assetCache = new HashMap<>();
         List<AssetDocument> allAssets = assetFireBaseAdapter.findAll();
@@ -330,15 +343,21 @@ public class PortfolioAnalyticsCore {
                 BigDecimal fee = tx.getFee() != null ? tx.getFee() : BigDecimal.ZERO;
                 BigDecimal amount = tx.getAmount() != null ? tx.getAmount() : price.multiply(qty);
 
-                if (price.compareTo(BigDecimal.ZERO) > 0) {
-                    lastPrice = price;
+                // Converte valores da moeda nativa da operação para a moeda destino (targetCurrency)
+                String txCurrency = resolveTransactionCurrency(tx, assetDoc);
+                BigDecimal effectivePrice = convertAmount(price, txCurrency, effectiveTargetCurrency, usdToBrl);
+                BigDecimal effectiveAmount = convertAmount(amount, txCurrency, effectiveTargetCurrency, usdToBrl);
+                BigDecimal effectiveFee = convertAmount(fee, txCurrency, effectiveTargetCurrency, usdToBrl);
+
+                if (effectivePrice.compareTo(BigDecimal.ZERO) > 0) {
+                    lastPrice = effectivePrice;
                 }
                 txCount++;
 
                 switch (type) {
                     case BUY:
                     case TRANSFER_IN:
-                        BigDecimal costThisOp = amount.add(fee);
+                        BigDecimal costThisOp = effectiveAmount.add(effectiveFee);
                         currentQuantity = currentQuantity.add(qty);
                         currentInvested = currentInvested.add(costThisOp);
                         if (currentQuantity.compareTo(BigDecimal.ZERO) > 0) {
@@ -351,7 +370,7 @@ public class PortfolioAnalyticsCore {
                     case AIRDROP:
                         // Rendimento passivo em cotas/tokens: custo base zero, apenas taxa adicionada se houver
                         currentQuantity = currentQuantity.add(qty);
-                        currentInvested = currentInvested.add(fee);
+                        currentInvested = currentInvested.add(effectiveFee);
                         if (currentQuantity.compareTo(BigDecimal.ZERO) > 0) {
                             avgBuyPrice = currentInvested.divide(currentQuantity, 8, RoundingMode.HALF_UP);
                         }
@@ -359,7 +378,7 @@ public class PortfolioAnalyticsCore {
 
                     case DIVIDEND:
                         // Provento financeiro em dinheiro: incrementa diretamente o lucro realizado da posição
-                        BigDecimal netDividend = amount.subtract(fee);
+                        BigDecimal netDividend = effectiveAmount.subtract(effectiveFee);
                         realizedPnL = realizedPnL.add(netDividend);
                         break;
 
@@ -368,7 +387,7 @@ public class PortfolioAnalyticsCore {
                         // Preço médio NÃO se altera.
                         // Lucro realizado = Receita Líquida - Custo da parcela vendida
                         BigDecimal costOfSold = avgBuyPrice.multiply(qty);
-                        BigDecimal netRevenue = amount.subtract(fee);
+                        BigDecimal netRevenue = effectiveAmount.subtract(effectiveFee);
                         BigDecimal profitThisSell = netRevenue.subtract(costOfSold);
                         realizedPnL = realizedPnL.add(profitThisSell);
 
@@ -412,7 +431,7 @@ public class PortfolioAnalyticsCore {
                         var marketPriceOpt = marketDataService.getMarketPrice(
                                 assetResponse.getSymbol(),
                                 assetResponse.getType(),
-                                targetCurrency
+                                effectiveTargetCurrency
                         );
                         if (marketPriceOpt.isPresent()) {
                             currentPrice = marketPriceOpt.get().getPrice();
@@ -449,7 +468,7 @@ public class PortfolioAnalyticsCore {
                     .realizedProfitLoss(realizedPnL.setScale(2, RoundingMode.HALF_UP))
                     .transactionsCount(txCount)
                     .change24hPercent(change24h)
-                    .currency(targetCurrency)
+                    .currency(effectiveTargetCurrency)
                     .build();
 
             grandTotalBalance = grandTotalBalance.add(totalValue);
@@ -696,5 +715,40 @@ public class PortfolioAnalyticsCore {
             default:
                 return false;
         }
+    }
+
+    private String resolveTransactionCurrency(TransactionDocument tx, AssetDocument assetDoc) {
+        if (tx.getCurrency() != null && !tx.getCurrency().isBlank()) {
+            return tx.getCurrency().trim().toUpperCase();
+        }
+        if (assetDoc != null) {
+            String assetType = assetDoc.getType();
+            if ("FII".equalsIgnoreCase(assetType) || "STOCK_BR".equalsIgnoreCase(assetType)) {
+                return "BRL";
+            }
+            if ("STOCK_US".equalsIgnoreCase(assetType) || "CRYPTO".equalsIgnoreCase(assetType)) {
+                return "USD";
+            }
+            if (assetDoc.getSymbol() != null && assetDoc.getSymbol().matches("^[A-Z]{4}[0-9]{1,2}[A-Z]?$")) {
+                return "BRL";
+            }
+        }
+        return "USD";
+    }
+
+    private BigDecimal convertAmount(BigDecimal amount, String fromCurrency, String toCurrency, BigDecimal usdToBrl) {
+        if (amount == null) return BigDecimal.ZERO;
+        if (fromCurrency.equalsIgnoreCase(toCurrency)) {
+            return amount;
+        }
+        if ("USD".equalsIgnoreCase(fromCurrency) && "BRL".equalsIgnoreCase(toCurrency)) {
+            return amount.multiply(usdToBrl).setScale(8, RoundingMode.HALF_UP);
+        }
+        if ("BRL".equalsIgnoreCase(fromCurrency) && "USD".equalsIgnoreCase(toCurrency)) {
+            if (usdToBrl != null && usdToBrl.compareTo(BigDecimal.ZERO) > 0) {
+                return amount.divide(usdToBrl, 8, RoundingMode.HALF_UP);
+            }
+        }
+        return amount;
     }
 }

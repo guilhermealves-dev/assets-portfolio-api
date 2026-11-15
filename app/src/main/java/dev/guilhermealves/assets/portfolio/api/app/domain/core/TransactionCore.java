@@ -16,6 +16,7 @@ import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.Tra
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.TransactionResponse;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletSwapResponse;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.api.response.WalletTransferResponse;
+import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.AssetType;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.TransactionType;
 import dev.guilhermealves.assets.portfolio.api.app.domain.utils.CsvUtils;
 import dev.guilhermealves.assets.portfolio.api.app.exception.BusinessException;
@@ -65,6 +66,16 @@ public class TransactionCore {
 
         TransactionDocument docRequest = transactionMapper.map(transaction);
 
+        if (docRequest.getCurrency() == null || docRequest.getCurrency().isBlank()) {
+            if ("FII".equalsIgnoreCase(assetDoc.getType()) || "STOCK_BR".equalsIgnoreCase(assetDoc.getType())) {
+                docRequest.setCurrency("BRL");
+            } else if (assetDoc.getSymbol() != null && assetDoc.getSymbol().matches("^[A-Z]{4}[0-9]{1,2}[A-Z]?$")) {
+                docRequest.setCurrency("BRL");
+            } else {
+                docRequest.setCurrency("USD");
+            }
+        }
+
         DocumentReference wallet = walletFireBaseAdapter.getDocReference(transaction.getWalletId());
         DocumentReference asset = assetFireBaseAdapter.getDocReference(assetId);
 
@@ -104,6 +115,16 @@ public class TransactionCore {
         }
 
         TransactionDocument docRequest = transactionMapper.map(transaction);
+
+        if (docRequest.getCurrency() == null || docRequest.getCurrency().isBlank()) {
+            if (existingTx.getCurrency() != null && !existingTx.getCurrency().isBlank()) {
+                docRequest.setCurrency(existingTx.getCurrency());
+            } else if (transaction.getAssetType() == AssetType.FII || transaction.getAssetType() == AssetType.STOCK_BR) {
+                docRequest.setCurrency("BRL");
+            } else {
+                docRequest.setCurrency("USD");
+            }
+        }
 
         String wId = transaction.getWalletId() != null ? transaction.getWalletId() : existingTx.getWalletId();
 

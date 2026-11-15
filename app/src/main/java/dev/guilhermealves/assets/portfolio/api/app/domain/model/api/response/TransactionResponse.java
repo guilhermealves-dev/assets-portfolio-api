@@ -42,4 +42,7 @@ public class TransactionResponse {
 
     @Schema(description = "Data e hora da transação", example = "2026-11-12T13:00:00")
     private LocalDateTime datetime;
+
+    @Schema(description = "Moeda da transação", example = "BRL")
+    private String currency;
 }

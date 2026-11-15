@@ -69,6 +69,9 @@ public class TransactionRequest {
     @Schema(description = "Data e hora da transação", example = "2026-11-12T13:00:00")
     private String datetime;
 
+    @Schema(description = "Moeda da transação (USD, BRL)", example = "BRL")
+    private String currency;
+
     @JsonIgnore
     @AssertTrue(message = "O ID do ativo (assetId) ou o símbolo (assetSymbol) deve ser informado")
     public boolean isAssetSpecified() {

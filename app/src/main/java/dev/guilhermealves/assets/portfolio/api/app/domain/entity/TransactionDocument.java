@@ -22,4 +22,5 @@ public class TransactionDocument {
     private BigDecimal quantity;
     private BigDecimal fee;
     private Timestamp datetime;
+    private String currency;
 }
