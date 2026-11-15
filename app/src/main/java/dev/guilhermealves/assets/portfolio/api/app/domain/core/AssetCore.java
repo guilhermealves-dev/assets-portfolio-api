@@ -101,20 +101,21 @@ public class AssetCore {
 
         // Auto-detecção inteligente de mercado caso não informado ou classificado genericamente
         AssetType effectiveHintType = hintType;
-        if (effectiveHintType == null || effectiveHintType == AssetType.OTHER) {
-            String upper = trimmed.toUpperCase();
-            if (upper.matches("^[A-Z]{4}11[B|F]?$")) {
-                effectiveHintType = AssetType.FII;
-            } else if (upper.matches("^[A-Z]{4}[345678][F]?$")) {
-                effectiveHintType = AssetType.STOCK_BR;
-            }
+        String upper = trimmed.toUpperCase();
+        if (upper.matches("^[A-Z]{4}11[B|F]?$") && (effectiveHintType == null || effectiveHintType == AssetType.OTHER || effectiveHintType == AssetType.STOCK_BR)) {
+            effectiveHintType = AssetType.FII;
+        } else if (upper.matches("^[A-Z]{4}[345678][F]?$") && (effectiveHintType == null || effectiveHintType == AssetType.OTHER)) {
+            effectiveHintType = AssetType.STOCK_BR;
         }
 
         // 1. Tenta buscar pelo ID direto no Firestore
         Optional<AssetDocument> byIdOpt = assetFireBaseAdapter.findById(trimmed);
         if (byIdOpt.isPresent()) {
             AssetDocument existing = byIdOpt.get();
-            if (effectiveHintType != null && !effectiveHintType.name().equalsIgnoreCase(existing.getType())) {
+            boolean shouldUpdateType = effectiveHintType != null 
+                    && !effectiveHintType.name().equalsIgnoreCase(existing.getType())
+                    && !("FII".equalsIgnoreCase(existing.getType()) && effectiveHintType == AssetType.STOCK_BR);
+            if (shouldUpdateType) {
                 existing.setType(effectiveHintType.name());
                 String correctLogo = assetIconResolver.resolveIconUrl(existing.getSymbol(), effectiveHintType);
                 if (correctLogo != null) {
@@ -131,7 +132,10 @@ public class AssetCore {
         if (bySymbolOpt.isPresent()) {
             AssetDocument existing = bySymbolOpt.get();
             // Se o usuário especificou explicitamente um tipo diferente do cadastrado (ex: foi criado como CRYPTO mas é FII), corrige
-            if (effectiveHintType != null && !effectiveHintType.name().equalsIgnoreCase(existing.getType())) {
+            boolean shouldUpdateType = effectiveHintType != null 
+                    && !effectiveHintType.name().equalsIgnoreCase(existing.getType())
+                    && !("FII".equalsIgnoreCase(existing.getType()) && effectiveHintType == AssetType.STOCK_BR);
+            if (shouldUpdateType) {
                 existing.setType(effectiveHintType.name());
                 String correctLogo = assetIconResolver.resolveIconUrl(existing.getSymbol(), effectiveHintType);
                 if (correctLogo != null) {
@@ -158,7 +162,11 @@ public class AssetCore {
                     if (pr.getName() != null && !pr.getName().isBlank() && (hintName == null || hintName.isBlank())) {
                         name = pr.getName();
                     }
-                    type = effectiveHintType;
+                    if (pr.getType() != null) {
+                        type = pr.getType();
+                    } else {
+                        type = effectiveHintType;
+                    }
                 }
             } catch (Exception e) {
                 log.warn("Erro ao buscar cotação direta para {} com tipo {}: {}", symbol, effectiveHintType, e.getMessage());
