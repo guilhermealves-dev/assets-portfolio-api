@@ -5,6 +5,7 @@ import com.google.cloud.firestore.*;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.AssetFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.TransactionFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.adapters.out.UserFireBaseAdapter;
+import dev.guilhermealves.assets.portfolio.api.app.adapters.out.WalletFireBaseAdapter;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.AssetType;
 import dev.guilhermealves.assets.portfolio.api.app.domain.model.enums.UserRole;
 import lombok.RequiredArgsConstructor;
@@ -12,8 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -111,17 +114,29 @@ public class DataMigrationService {
             }
         }
 
-        // 3. Migrar Usuários (garantir atributo role em todos os usuários)
+        // 3. Migrar Usuários (garantir atributo role em todos os usuários e limpar usuários de teste legados)
         int migratedUsers = 0;
+        int deletedTestUsers = 0;
+        int deletedTestWallets = 0;
+        Set<String> testUserIds = new HashSet<>();
+
         ApiFuture<QuerySnapshot> userFuture = dbFirestore.collection(UserFireBaseAdapter.COLLECTION_NAME).get();
         List<QueryDocumentSnapshot> userDocs = userFuture.get().getDocuments();
 
         for (QueryDocumentSnapshot doc : userDocs) {
-            String role = doc.getString("role");
-            if (role == null || role.trim().isEmpty()) {
-                batch.update(doc.getReference(), "role", UserRole.NORMAL.name());
-                migratedUsers++;
+            String email = doc.getString("email");
+            if (email != null && (email.endsWith("@portfolio.dev") || email.endsWith("@portfolio.test") || email.startsWith("user.b."))) {
+                testUserIds.add(doc.getId());
+                batch.delete(doc.getReference());
+                deletedTestUsers++;
                 batchCount++;
+            } else {
+                String role = doc.getString("role");
+                if (role == null || role.trim().isEmpty()) {
+                    batch.update(doc.getReference(), "role", UserRole.NORMAL.name());
+                    migratedUsers++;
+                    batchCount++;
+                }
             }
 
             if (batchCount >= 400) {
@@ -131,19 +146,45 @@ public class DataMigrationService {
             }
         }
 
+        // Limpar carteiras órfãs pertencentes a usuários de teste
+        if (!testUserIds.isEmpty()) {
+            try {
+                ApiFuture<QuerySnapshot> walletFuture = dbFirestore.collection(WalletFireBaseAdapter.COLLECTION_NAME).get();
+                List<QueryDocumentSnapshot> walletDocs = walletFuture.get().getDocuments();
+                for (QueryDocumentSnapshot wDoc : walletDocs) {
+                    String uId = wDoc.getString("userId");
+                    if (uId != null && testUserIds.contains(uId)) {
+                        batch.delete(wDoc.getReference());
+                        deletedTestWallets++;
+                        batchCount++;
+                    }
+
+                    if (batchCount >= 400) {
+                        batch.commit().get();
+                        batch = dbFirestore.batch();
+                        batchCount = 0;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Erro ao limpar carteiras de teste: {}", e.getMessage());
+            }
+        }
+
         if (batchCount > 0) {
             batch.commit().get();
         }
 
-        log.info("Migração concluída com sucesso! Transações: {}, Ativos: {}, Usuários com role atualizada: {}",
-                migratedTransactions, migratedAssets, migratedUsers);
+        log.info("Migração concluída com sucesso! Transações: {}, Ativos: {}, Usuários com role atualizada: {}, Usuários de teste removidos: {}, Carteiras de teste removidas: {}",
+                migratedTransactions, migratedAssets, migratedUsers, deletedTestUsers, deletedTestWallets);
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "SUCCESS");
         result.put("migratedTransactions", migratedTransactions);
         result.put("migratedAssets", migratedAssets);
         result.put("migratedUsers", migratedUsers);
-        result.put("message", "Dados históricos normalizados e atualizados com sucesso no Firebase.");
+        result.put("deletedTestUsers", deletedTestUsers);
+        result.put("deletedTestWallets", deletedTestWallets);
+        result.put("message", "Dados históricos normalizados e usuários de teste órfãos removidos com sucesso no Firebase.");
 
         return result;
     }

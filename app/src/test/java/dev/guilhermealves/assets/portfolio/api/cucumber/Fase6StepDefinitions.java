@@ -479,11 +479,16 @@ public class Fase6StepDefinitions {
                 } catch (Exception ignored) {
                 }
             }
-            // Limpa usuários
+            // Limpa usuários (cada usuário remove a si mesmo com seu próprio token, ou via admin)
             for (String uId : createdUserIds) {
                 try {
-                    mockMvc.perform(delete("/users/{id}", uId).header("Authorization", getAuthHeader()));
+                    mockMvc.perform(delete("/users/{id}", uId).header("Authorization", "Bearer test-token-" + uId));
                 } catch (Exception ignored) {
+                    try {
+                        mockMvc.perform(delete("/users/{id}", uId).header("Authorization", "Bearer test-token-admin"));
+                    } catch (Exception e2) {
+                        log.warn("Falha ao remover usuário de teste {}: {}", uId, e2.getMessage());
+                    }
                 }
             }
         } catch (Exception e) {
